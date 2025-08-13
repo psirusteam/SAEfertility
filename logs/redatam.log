@@ -1,0 +1,10 @@
+[09:11:31] [red_engine] [info] intitializing libxml
+[09:11:31] [red_engine] [info] intitializing error-table
+[09:11:31] [red_engine] [info] intitializing msg-table
+[09:11:31] [red_engine] [info] registering arrow dataset
+[09:11:31] [red_engine] [info] registering cspro datasource
+[09:11:31] [red_engine] [info] intitializing sdc RR4 processor
+[09:11:31] [red_engine] [info] intitializing plugins
+[09:11:31] [red_engine] [debug] Loading plugins from directory [plugins]
+[09:11:31] [red_engine] [info] intitializing pwd-provide
+[09:11:31] [red_engine] [info] intitializing openssl

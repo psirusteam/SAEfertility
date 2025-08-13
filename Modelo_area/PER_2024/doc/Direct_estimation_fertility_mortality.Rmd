@@ -1,0 +1,703 @@
+---
+title: "Estimación directa de fecundidad y mortalidad infantil - Proyecto SAEfertility"
+author: "Yury Vanessa Ochoa"
+output: word_document
+date: "2025-07-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Introducción
+
+Este documento presenta el procedimiento de estimación directa de indicadores de fecundidad y mortalidad infantil a partir de bases de datos individuales de mujeres en edad fértil y de nacimientos en Perú 2024, en el marco del *proyecto SAEfertility*.
+
+La estimación se realiza utilizando métodos directos basados en el conteo de eventos (nacimientos y defunciones) y en el cálculo del tiempo de exposición al riesgo, aplicando el diseño muestral para garantizar representatividad.
+
+Los indicadores principales estimados son:
+
+- **Tasas Específicas de Fecundidad (ASFR):** Miden el número de nacimientos vivos por cada 1.000 mujeraños en un grupo específico de edad quinquenal (por ejemplo, 15–19, 20–24, etc.). Estas tasas permiten analizar la distribución de la fecundidad según edad.
+
+- **Tasa Global de Fecundidad (TFR):** Estima cuántos hijos tendría en promedio una mujer a lo largo de su vida reproductiva (de 15 a 49 años), si mantuviera las tasas de fecundidad observadas en cada grupo etario.
+
+- **Promedio de hijos nacidos vivos:** Calcula cuántos hijos ha tenido en promedio cada mujer al momento de la entrevista. A diferencia de la TFR, que es una medida sintética basada en tasas recientes, este indicador refleja la fecundidad acumulada efectivamente observada en las mujeres.
+
+- **Tasa de Mortalidad Infantil (IMR):**Probabilidad de que un niño expuesto en un periodo específico muera antes de cumplir 1 año de vida.
+
+- **Tasa de Mortalidad de la Niñez (CMR):** Probabilidad de que un niño expuesto en un periodo específico muera después de cumplir 1 año y antes de alcanzar los 5 años de edad.
+
+- **Tasa de Mortalidad en Menores de Cinco Años (U5MR):** Probabilidad de que un niño expuesto en un periodo específico muera antes de cumplir los 5 años.
+
+## 2. Definición de métricas de fecundidad y mortalidad
+
+### 2.1 ¿Qué es un "mujeraño"?
+
+Un **mujeraño** es una unidad de medida que representa **un año completo de exposición al riesgo de tener hijos por parte de una mujer** en un determinado grupo de edad.  
+
+- Si una mujer de 20 años es observada durante 1 año completo, aporta 1 mujeraño al grupo 20–24.  
+- Si es observada durante solo 6 meses, aporta 0.5 mujeraños.
+
+Este concepto se usa para calcular tasas de fecundidad por edad, ya que no todas las mujeres están expuestas durante el mismo tiempo.
+
+### 2.2 Tasa Específica de Fecundidad (ASFR)
+
+\[
+\text{ASFR}_a = \frac{Y_a}{E_a} \times 1000
+\]
+
+Donde:
+
+- \( Y_a \): número total de nacimientos ocurridos en mujeres del grupo de edad \( a \) durante el período de referencia.
+- \( E_a \): número total de mujeraños de exposición en ese grupo de edad.
+
+Multiplicamos por 1000 para expresar la tasa como nacimientos por cada 1.000 mujeraños.
+
+### 2.3 Tasa específica de fecundidad de adolescentes (ASFR 15–19)
+
+\[
+\text{ASFR}_{15\text{–}19} = \frac{Y_{15\text{–}19}}{E_{15\text{–}19}} \times 1000
+\]
+
+Donde:
+
+- \( Y_{15\text{–}19} \): número total de nacimientos ocurridos en mujeres de 15 a 19 años durante el período de referencia.
+- \( E_{15\text{–}19} \): número total de mujeraños de exposición en ese grupo de edad.
+
+Multiplicamos por 1.000 para expresar la tasa como nacimientos por cada 1.000 mujeraños.
+
+### 2.4 Tasa Global de Fecundidad (TFR)
+
+\[
+\text{TFR} = 5 \times \sum_{a \in \mathcal{A}} \frac{\text{ASFR}_a}{1000}
+\]
+
+Donde \( \mathcal{A} \) representa los grupos de edad quinquenales:  
+15–19, 20–24, ..., 45–49.
+
+Multiplicamos por 5 porque cada grupo de edad abarca 5 años.
+
+### 2.5 Promedio de hijos nacidos vivos por mujer
+
+\[
+\text{Promedio de hijos} = \frac{\sum_{i=1}^{n} h_i}{n}
+\]
+
+Donde:
+
+- \( h_i \): número de hijos nacidos vivos de la mujer \( i \).
+- \( n \): número total de mujeres encuestadas (entre 15 y 49 años).
+
+Este indicador refleja la fecundidad acumulada hasta la fecha de la entrevista, a diferencia de la TFR que se refiere a tasas recientes.
+
+### 2.6 Tasa de Mortalidad Infantil (IMR)
+
+La Tasa de Mortalidad Infantil (IMR) representa la probabilidad de que un niño nacido vivo muera antes de cumplir su primer año de vida. Se estima como la combinación de probabilidades de muerte por segmentos de edad, y se expresa como una tasa por cada 1.000 nacidos vivos.
+
+$$
+q_0 = 1 - (1 - q_{[0,1)})(1 - q_{[1,3)})(1 - q_{[3,6)})(1 - q_{[6,12)})
+$$
+
+Donde: 
+
+- \( q_{[0,1)} \): Probabilidad de morir en el primer mes de vida (mortalidad neonatal).
+- \( q_{[1,3)} \): Probabilidad de morir entre el primer y tercer mes de vida (posneonatal temprana).
+- \( q_{[3,6)} \): Probabilidad de morir entre los 3 y 6 meses de vida.
+- \( q_{[6,12)} \): Probabilidad de morir entre los 6 y 12 meses de vida.
+
+Cada componente \( q_{[a_1,a_2)} \) se estima como el cociente entre el número de muertes ocurridas en el intervalo de edad y el número de niños expuestos al riesgo al inicio del mismo, aplicando ponderaciones de exposición parcial o completa por cohortes (A, B y C). El periodo de análisis corresponde a los **60 meses previos a la entrevista**
+
+### 2.7 Tasa de Mortalidad de la Niñez (CMR)
+
+La **Tasa de Mortalidad de la Niñez (CMR, por sus siglas en inglés)** representa la probabilidad de que un niño nacido vivo muera después de cumplir su primer año y antes de alcanzar los cinco años de edad. Este indicador se estima como una tasa por cada 1.000 nacidos vivos.
+
+$$
+q_0 = 1 - (1 - q_{[12,24)})(1 - q_{[24,36)})(1 - q_{[36,48)})(1 - q_{[48,60)})
+$$
+
+**Donde:**
+
+- \( q_{[12,24)} \): Probabilidad de morir entre los 12 y 24 meses de vida.
+- \( q_{[24,36)} \): Probabilidad de morir entre los 24 y 36 meses de vida.
+- \( q_{[36,48)} \): Probabilidad de morir entre los 36 y 48 meses de vida.
+- \( q_{[48,60)} \): Probabilidad de morir entre los 48 y 60 meses de vida.
+
+Cada componente \( q_{[a_1,a_2)} \) se estima como el cociente entre el número de muertes ocurridas en el intervalo de edad y el número de niños expuestos al riesgo al inicio del mismo, aplicando ponderaciones de exposición parcial o completa por cohortes (A, B y C). El periodo de análisis corresponde a los **60 meses previos a la entrevista**
+
+### 2.8 Tasa de Mortalidad en Menores de Cinco Años (U5MR)
+
+La **Tasa de Mortalidad en Menores de Cinco Años (U5MR)** representa la probabilidad de que un niño nacido vivo muera antes de cumplir cinco años de vida. Este indicador se estima como una tasa por cada 1.000 nacidos vivos, acumulando las probabilidades de morir en los distintos intervalos de edad entre el nacimiento y los 59 meses.
+
+$$
+q_0 = 1 - (1 - q_{[0,1)})(1 - q_{[1,3)})(1 - q_{[3,6)})(1 - q_{[6,12)})(1 - q_{[12,24)})(1 - q_{[24,36)})(1 - q_{[36,48)})(1 - q_{[48,60)})
+$$
+**Donde:**
+
+- \( q_{[0,1)} \): Probabilidad de morir en el primer mes de vida.
+- \( q_{[1,3)} \): Probabilidad de morir entre el primer y tercer mes de vida.
+- \( q_{[3,6)} \): Probabilidad de morir entre los 3 y 6 meses de vida.
+- \( q_{[6,12)} \): Probabilidad de morir entre los 6 y 12 meses de vida.
+- \( q_{[12,24)} \): Probabilidad de morir entre los 12 y 24 meses de vida.
+- \( q_{[24,36)} \): Probabilidad de morir entre los 24 y 36 meses de vida.
+- \( q_{[36,48)} \): Probabilidad de morir entre los 36 y 48 meses de vida.
+- \( q_{[48,60)} \): Probabilidad de morir entre los 48 y 60 meses de vida.
+
+Cada componente \( q_{[a_1,a_2)} \) se estima como el cociente entre el número de muertes ocurridas en el intervalo de edad y el número de niños expuestos al riesgo al inicio del mismo, aplicando ponderaciones de exposición parcial o completa por cohortes (A, B y C). El periodo de análisis corresponde a los **60 meses previos a la entrevista**
+
+
+## 3. Construcción indicadores fertility - Manual
+
+Se inicia con la limpieza del entorno de trabajo, la carga de librerías necesarias y la lectura de las bases de datos.
+
+```{r, echo=FALSE, include=FALSE}
+library(dplyr)
+library(survey)
+library(srvyr)
+library(tidyr)
+library(writexl)
+
+```
+
+```{r, echo=TRUE}
+b_path <- dirname(getwd())
+
+input <- file.path(b_path, "input")
+output <- file.path(b_path, "output")
+src <- file.path(b_path, "src")
+
+
+base_nacimientos <- readRDS(file.path(output, "base_nacimientos.rds"))
+base_MEF <- readRDS(file.path(output, "base_MEF.rds"))
+```
+
+
+### 3.1 Tasa Específica de Fecundidad (ASFR)
+
+El cálculo de la ASFR (Tasa Específica de Fecundidad) requiere dos componentes fundamentales:
+
+1. **Exposición al riesgo:** Se estima cuántos meses estuvo cada mujer en edad fértil expuesta al riesgo de tener hijos durante los 36 meses anteriores a la entrevista. Para ello, se genera una base expandida que contiene una fila por cada mes observado, asignando a cada mujer su edad mensual y el grupo de edad quinquenal correspondiente. A cada fila se le asigna un valor de exposición de $$\frac{1}{12}$$, equivalente a un mes de exposición (1 año dividido en 12).
+
+```{r, echo=TRUE}
+base_exp <- base_MEF %>%
+  mutate(
+    start_month = date_entrevista - 36, # Inicio del t: 36 meses antes
+    end_month = date_entrevista - 1 # Fin del t: el mes anterior a la entrevista
+  ) %>%
+  rowwise() %>%
+  mutate(meses = list(start_month:end_month)) %>% 
+  unnest(cols = c(meses)) %>%
+  ungroup() %>%
+  mutate(
+    edad_mensual = (meses - date_nac_muj) / 12,         # Se calcula la edad mensual de cada mujer en cada mes observado.
+    grupo_edad = case_when(                             # Se clasifica en los grupos quinqueniales.
+      edad_mensual >= 15 & edad_mensual < 20 ~ "15-19",
+      edad_mensual >= 20 & edad_mensual < 25 ~ "20-24",
+      edad_mensual >= 25 & edad_mensual < 30 ~ "25-29",
+      edad_mensual >= 30 & edad_mensual < 35 ~ "30-34",
+      edad_mensual >= 35 & edad_mensual < 40 ~ "35-39",
+      edad_mensual >= 40 & edad_mensual < 45 ~ "40-44",
+      edad_mensual >= 45 & edad_mensual < 50 ~ "45-49",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  filter(!is.na(grupo_edad)) %>%
+  mutate(evento = 0, expo =1/12)
+```
+
+2. **Eventos de fecundidad (nacimientos):** A partir de la base de nacimientos, se identifica si el nacimiento ocurrió dentro del período de referencia y se calcula la edad de la madre al momento del nacimiento para asignarla al grupo de edad correspondiente. Cada nacimiento se considera un evento (\( evento = 1 \)) y su exposición también se define como $$\frac{1}{12}$$.
+
+```{r, echo=TRUE}
+base_nacimientos2 <- base_nacimientos %>%
+  mutate(
+    edad_madre_nac = (date_nac_hij - date_nac_muj) / 12, #Se calcula la edad de la madre al momento del parto
+    grupo_edad = case_when(
+      edad_madre_nac >= 15 & edad_madre_nac < 20 ~ "15-19",
+      edad_madre_nac >= 20 & edad_madre_nac < 25 ~ "20-24",
+      edad_madre_nac >= 25 & edad_madre_nac < 30 ~ "25-29",
+      edad_madre_nac >= 30 & edad_madre_nac < 35 ~ "30-34",
+      edad_madre_nac >= 35 & edad_madre_nac < 40 ~ "35-39",
+      edad_madre_nac >= 40 & edad_madre_nac < 45 ~ "40-44",
+      edad_madre_nac >= 45 & edad_madre_nac < 50 ~ "45-49",
+      TRUE ~ NA_character_
+    ),
+    en_periodo = date_nac_hij >= (date_entrevista - 36) & date_nac_hij <= (date_entrevista - 1)
+  ) %>%
+  filter(!is.na(grupo_edad), en_periodo == TRUE) %>% #Se filtran solo los nacimientos ocurridos en los 36 meses antes de la entrevista y donde la madre tenía entre 15 y 49 años.
+  mutate(evento = 1, expo = 1/12)
+```
+
+Una vez creadas estas dos bases, se combinan para tener una base completa que contiene:
+
+- Mujeres con nacimientos ocurridos (eventos = 1)
+- Mujeres sin nacimientos pero expuestas (eventos = 0)
+
+```{r, echo=TRUE}
+
+base_completa <- bind_rows(base_nacimientos2,base_exp)
+
+```
+
+Antes de construir el diseño muestral, es necesario escalar el peso muestral mujeres (\( fep_m \)) dividiéndolo por 1.000.000, tal como lo establece el Instituto Nacional de Estadística e Informática (INEI) de Perú en sus informes metodológicos.
+
+Luego, se crea el objeto de diseño de encuesta con la función `svydesign`, especificando:
+
+- `id = ~upm`: unidad primaria de muestreo
+- `strata = ~strata`: variable de estratificación
+- `weights = ~fep_m`: pesos muestrales ajustados
+- `nest = TRUE`: indica que los conglomerados están anidados en los estratos
+
+```{r, echo=TRUE}
+
+base_completa$fep_m <- base_completa$fep_m / 1000000
+
+options(survey.lonely.psu = "adjust")
+
+disenio_svy <- svydesign(
+  id = ~upm,
+  strata = ~strata,
+  weights = ~fep_m,
+  data = base_completa,
+  nest = TRUE
+)
+
+```
+
+```{r, echo=TRUE, include=TRUE}
+svyby(
+  formula = ~evento,
+  denominator = ~expo,
+  by = ~grupo_edad,
+  design = disenio_svy,
+  FUN = svyratio,
+  vartype = c("cv","se"),
+  na.rm = TRUE
+) %>%
+  mutate(asfr_mil = `evento/expo` * 1000)%>%
+  mutate(across(where(is.numeric), ~round(., 3)))
+```
+
+### 3.2 Tasa específica de fecundidad de adolescentes (15–19 años)
+
+Siguiendo el mismo procedimiento descrito para el cálculo general de las tasas específicas de fecundidad (ASFR), se puede obtener la tasa específica para el grupo de edad 15–19 años filtrando el diseño muestral previamente construido.
+
+```{r, echo=TRUE, include=TRUE}
+
+# Filtrar solo adolescentes 15–19 años
+disenio_1519 <- subset(disenio_svy, grupo_edad == "15-19")
+
+# Estimar la ASFR 15–19 por departamento (dam)
+svyby(
+  formula = ~evento,
+  denominator = ~expo,
+  by = ~dam,
+  design = disenio_1519,
+  FUN = svyratio,
+  vartype = c("cv", "se"),
+  na.rm = TRUE
+) %>%
+  mutate(asfr_mil = `evento/expo` * 1000) %>%
+  mutate(across(where(is.numeric), ~round(., 3)))
+
+```
+
+### 3.3 Tasa Global de Fecundidad (TFR)
+
+A partir de los resultados de las tasas específicas de fecundidad (ASFR), se estima la TFR sumando las tasas y multiplicando por el ancho del grupo etario (5 años):
+
+```{r, echo=TRUE, include=TRUE}
+asfr <- svyby(
+  formula = ~evento,
+  denominator = ~expo,
+  by = ~grupo_edad,
+  design = disenio_svy,
+  FUN = svyratio,
+  vartype = c("se"),
+  na.rm = TRUE
+) %>%
+  mutate(asfr_mil = `evento/expo` * 1000)
+
+# Cálculo de TFR
+tfr <- sum(asfr$`evento/expo`, na.rm = TRUE) * 5
+# Error estándar del TFR
+se_tfr <- sqrt(sum((asfr$`se.evento/expo`)^2, na.rm = TRUE)) * 5
+# Coeficiente de variación en porcentaje
+cv_tfr <- (se_tfr / tfr) * 100
+
+tfr <- data.frame(
+  TFR = round(tfr, 3),
+  se = round(se_tfr, 2),
+  CV = round(cv_tfr, 2)
+)%>%
+  mutate(across(where(is.numeric), ~round(., 3)));tfr
+```
+
+### 3.4 Promedio de hijos nacidos vivos
+
+Este indicador estima la fecundidad acumulada de las mujeres al momento de la entrevista. Para su cálculo, se agrupa la base de nacimientos para contar cuántos hijos ha tenido cada mujer encuestada y se une esta información a la base de mujeres. Posteriormente, se ajusta el factor de expansión y se filtran las mujeres en edades entre 15 y 49 años, sobre quienes se construye el diseño muestral.
+
+```{r, echo=TRUE}
+base_nacxmuj <- base_nacimientos %>%
+  group_by(id_individual) %>%
+  summarise(hijos_nacidos = n())
+
+#Unir a la base de mujeres
+
+base_MEF2 <- base_MEF %>%left_join(
+  base_nacxmuj, by = "id_individual")  %>% mutate(
+  hijos_nacidos = ifelse(is.na(hijos_nacidos), 0, hijos_nacidos)) %>% filter(
+    edad_actual >= 15 & edad_actual <=49 )
+
+```
+
+Se contruyé  el diseño muestral, es necesario escalar el peso muestral mujeres (\( fep_m \)) dividiéndolo por 1.000.000, tal como lo establece el Instituto Nacional de Estadística e Informática (INEI) de Perú en sus informes metodológicos.
+
+```{r, echo=TRUE}
+base_MEF2$fep_m <- base_MEF2$fep_m/1000000
+
+disenio_svy2 <- svydesign(
+  id = ~upm,
+  strata = ~strata,
+  weights = ~fep_m,
+  data = base_MEF2,
+  nest = TRUE
+)
+
+```
+
+Finalmente, se estima el promedio de hijos nacidos vivos aplicando la función svymean() del paquete survey, obteniendo también el error estándar y el coeficiente de variación.
+
+```{r, echo=TRUE, include=TRUE}
+options(survey.lonely.psu="adjust")
+
+prom_hi_raw <- svymean(~hijos_nacidos, disenio_svy2, vartype = c("se", "cv"), na.rm = TRUE)
+
+prom_hi <- data.frame(
+  Promedio = round(as.numeric(coef(prom_hi_raw)), 2),
+  SE       = round(as.numeric(SE(prom_hi_raw)), 2),
+  CV       = round(as.numeric(cv(prom_hi_raw)), 2)
+)
+
+prom_hi
+```
+
+
+## 4. Construcción indicadores fertility - con la libreria DHS
+
+Se inicia con la limpieza del entorno de trabajo, la carga de las librerías necesarias y la lectura de las bases de datos brutas extraídas del módulo de mujeres y de nacimientos.
+
+Es importante tener en cuenta que:
+
+- Si no se tiene instalada la librería `DHS.rates`, se debe instalar previamente con el siguiente comando:
+
+
+```{r , echo=TRUE, include=FALSE}
+if (!requireNamespace("DHS.rates", quietly = TRUE)) {
+  remotes::install_github("maczokni/DHS.rates")
+}
+
+library(DHS.rates)
+library(dplyr)
+library(writexl)
+
+```
+
+```{r, echo=TRUE}
+base_MEF_bruta <- read.csv(file.path(input, "REC0111_2024.csv"), stringsAsFactors = FALSE)# Modulo mujeres en edad fertil 12 - 49 años
+base_emb_bruta <- read.csv(file.path(input, "REC21_2024.csv"), stringsAsFactors = FALSE) #Historial de embarazos
+```
+
+A continuación, se realiza la transformación de las bases necesarias para el análisis, unificando la información del historial de embarazos y la base de mujeres, y estandarizando las variables clave.
+
+- Convertir historial de embarazos a formato ancho. Cada mujer tendrá una fila, y una columna por cada nacimiento registrado (b3_01, b3_02, etc.) y se une con la base de mujeres.
+
+```{r, echo=TRUE}
+
+base_emb_anch <- base_emb_bruta %>%
+  group_by(CASEID) %>%
+  arrange(CASEID, B3) %>%
+  mutate(b3_n = paste0("b3_", sprintf("%02d", row_number()))) %>%
+  ungroup() %>%
+  select(CASEID, b3_n, B3) %>%
+  pivot_wider(names_from = b3_n, values_from = B3)
+
+# Unir la base de mujeres con la de embarazos ancha
+base_total <- base_MEF_bruta %>%
+  left_join(base_emb_anch, by = "CASEID")
+```
+
+- Estandarizar los nombres de las variables a minúsculas
+```{r}
+#    Esto es requerido por la librería DHS.rates
+names(base_total) <- tolower(names(base_total))
+```
+
+### 4.1 Tasa Específica de Fecundidad (ASFR)
+
+Se estima la Tasa Específica de Fecundidad (ASFR) mediante el método directo propuesto por DHS. Esta tasa mide cuántos nacimientos vivos ocurren por cada 1.000 mujeraños de exposición, según grupos de edad quinquenal (15–19, 20–24, ..., 45–49).
+
+La estimación se realiza con la función `fert()` de la librería `DHS.rates`, especificando la base de datos, el tipo de indicador, el periodo de análisis y la opción de estimar errores estándar mediante el método Jackknife.
+
+```{r, echo=TRUE, include=TRUE}
+fert(
+  Data.Name = base_total,
+  Indicator = "asfr",
+  Period = 36,
+  JK = "Yes"
+)
+```
+### 4.2 Tasa Global de Fecundidad (TFR)
+
+Se estima la Tasa Global de Fecundidad (TFR) mediante el método directo propuesto por DHS. Esta tasa representa el número promedio de hijos que tendría una mujer a lo largo de su vida reproductiva (entre los 15 y los 49 años), si mantuviera las tasas de fecundidad observadas en el periodo reciente.
+
+La estimación se realiza con la función `fert()` de la librería `DHS.rates`, especificando la base de datos, el tipo de indicador, el periodo de análisis y la opción de estimar errores estándar mediante el método Jackknife.
+
+```{r, echo=TRUE, include=TRUE}
+fert(
+  Data.Name = base_total,
+  Indicator = "tfr",
+  Period = 36,
+  JK = "Yes"
+)
+```
+## 5. Construcción indicadores mortaliy -Manual
+
+A continuación se presenta la estimación directa de probabilidades de muerte por componentes de edad, siguiendo el enfoque del programa DHS. La estimación se realiza para nacimientos ocurridos dentro de los 60 meses previos a la entrevista, y aplica el diseño muestral.
+
+```{r, echo=FALSE, include=FALSE}
+library(dplyr)
+library(survey)
+library(srvyr)
+library(tidyr)
+library(writexl)
+library(lubridate)
+```
+
+Se carga la base de datos de nacimientos, en la cual cada fila representa un hijo nacido de una mujer entrevistada en la encuesta. Esta base ha sido previamente procesada para contener información individual por nacimiento.
+
+```{r, echo=TRUE, include=TRUE}
+base_nacimientos <- readRDS(file.path(output, "base_nacimientos.rds"))
+```
+
+Posteriormente, se filtran los registros con fecha de nacimiento válida y se generan las variables clave para el análisis:
+
+- rweight: peso muestral normalizado (dividiendo el factor de expansión fep_m entre un millón).
+
+- tu: fecha de entrevista de la madre.
+
+- tl: fecha correspondiente al inicio del periodo de análisis, definido como 60 meses antes de la entrevista.
+
+```{r, echo=TRUE, include=TRUE}
+base_imr <- base_nacimientos %>%
+  filter(!is.na(date_nac_hij)) %>%
+  mutate(
+    rweight = fep_m / 1e6,                    # Peso muestral normalizado
+    tu = date_entrevista,                     # Fecha de entrevista
+    tl = date_entrevista - 60                 # Inicio del periodo de análisis (5 años)
+  )
+```
+
+Se definen los segmentos de edad (en meses) sobre los cuales se estimarán las probabilidades de muerte, siguiendo los tramos utilizados por DHS.
+
+```{r, echo=TRUE}
+segmentos <- list("1" = c(0, 1),"2" = c(1, 3),"3" = c(3, 6),"4" = c(6, 12),"5" = c(12, 24),
+                  "6" = c(24, 36),"7" = c(36, 48),"8" = c(48, 60))
+```
+
+Se inicializan dos vectores vacíos:
+
+- `q_est`: para almacenar las probabilidades estimadas de muerte por intervalo.
+- `se_est`: para almacenar sus errores estándar respectivos.
+
+```{r, echo=TRUE}
+q_est <- numeric()
+se_est <- numeric()
+```
+
+```{r, echo=TRUE}
+
+# Iterar por cada tramo de edad definido (en meses)
+for (i in names(segmentos)) {
+  
+  # Extraer límites de edad del tramo actual
+  a1 <- segmentos[[i]][1]  # Límite inferior del tramo
+  a2 <- segmentos[[i]][2]  # Límite superior del tramo
+  
+  # Construir subconjunto de datos con lógica DHS (cohortes A, B y C)
+  seg <- base_imr %>%
+    # Filtrar niños que están vivos al inicio del tramo 
+    #o tienen edad de muerte en el tramo
+    filter(is.na(edad_muerte_imp) | edad_muerte_imp >= a1) %>%
+    
+    # Calcular la exposición al riesgo y ocurrencia de muerte
+    mutate(
+    # -------------------
+    # EXPOSICIÓN:
+    # -------------------
+    # Cohorte A: Nacidos justo antes del periodo -> expuestos parcialmente al tramo
+    # Cohorte B: Nacidos durante el periodo -> expuestos completamente al tramo
+    # Cohorte C: Nacidos al final del periodo -> expuestos parcialmente al tramo
+      exposure = case_when(
+        date_nac_hij >= (tl - a2) & date_nac_hij < (tl - a1) ~ 0.5,  # Cohorte A
+        date_nac_hij >= (tl - a1) & date_nac_hij < (tu - a2) ~ 1,    # Cohorte B
+        date_nac_hij >= (tu - a2) & date_nac_hij < (tu - a1) ~ 0.5,  # Cohorte C
+        TRUE ~ 0                                                     # No expuesto
+      ),
+      
+    # -------------------
+    # DEFUNCIONES:
+    # -------------------
+    # Aplicar la misma lógica de cohortes para asignar el valor de muerte ponderada
+      death = case_when(
+        date_nac_hij >= (tl - a2) & date_nac_hij < (tl - a1) &
+          edad_muerte_imp >= a1 & edad_muerte_imp < a2 ~ 0.5,
+        
+        date_nac_hij >= (tl - a1) & date_nac_hij < (tu - a2) &
+          edad_muerte_imp >= a1 & edad_muerte_imp < a2 ~ 1,
+        
+        date_nac_hij >= (tu - a2) & date_nac_hij < (tu - a1) &
+          edad_muerte_imp >= a1 & edad_muerte_imp < a2 ~ ifelse(!is.na(tu), 1, 0.5),
+        
+        is.na(edad_muerte_imp) ~ 0,
+        
+        # Cualquier otro caso, asignar 0
+        TRUE ~ 0
+      )
+    ) %>%
+    # Conservar solo observaciones con exposición positiva
+    filter(exposure > 0)
+  
+  # Definir el diseño muestral complejo
+  disenio <- svydesign(
+    id = ~upm,             # Unidades primarias de muestreo
+    strata = ~strata,      # Estrato muestral
+    weights = ~rweight,    # Peso muestral ajustado
+    data = seg,
+    nest = TRUE
+  )
+  
+  # Calcular la razón defunciones/exposición usando svyratio
+  ratio <- svyratio(~death, ~exposure, disenio)
+  
+  # Almacenar la probabilidad estimada (coeficiente) y su error estándar
+  q_est[i] <- coef(ratio)
+  se_est[i] <- SE(ratio)
+}
+
+```
+
+Con base en las probabilidades de muerte estimadas por tramo de edad (`q_est`), se construyen los indicadores compuestos mediante la combinación multiplicativa de las probabilidades complementarias de sobrevivencia. Para estimar el **error estándar (SE)** de esta tasa, se aplica la **regla delta**. Esta técnica utiliza los errores estándar individuales de cada tramo y los combina, ponderándolos por derivadas parciales de la función.
+
+- Para cada \( q_i \), se calcula el producto de los términos \( (1 - q_j) \) excluyendo el \( i \)-ésimo.
+- Luego se eleva al cuadrado y se multiplica por la varianza \( SE(q_i)^2 \).
+- Se suman todos estos valores y se extrae la raíz cuadrada.
+- Finalmente, se multiplica por 1.000 para escalar la tasa por mil.
+
+### 5.1 Tasa de Mortalidad Infantil (IMR)
+
+
+```{r,echo=TRUE, include=TRUE}
+# IMR: Probabilidad de morir antes del primer año de vida (0–11 meses)
+IMR <- (1 - prod(1 - q_est[1:4])) * 1000
+
+# Error estándar usando la regla delta
+partials_imr <- sapply(1:4, function(j) prod(1 - q_est[-j]))# Derivadas parciales
+se_imr <- 1000 * sqrt(sum((partials_imr^2) * se_est[1:4]^2))
+
+# Coeficiente de variación
+se_imr <- (se_imr / IMR) * 100
+
+IMR
+se_imr
+se_imr
+```
+### 5.2 Tasa de Mortalidad de la Niñez (CMR)
+
+```{r, echo=TRUE, include=TRUE}
+# CMR: Probabilidad de morir entre 12 y 59 meses (niñez)
+CMR <- (1 - prod(1 - q_est[5:8])) * 1000
+
+# Error estándar
+partials_cmr <- sapply(5:8, function(j) prod(1 - q_est[-j]))# Derivadas parciales
+se_cmr <- 1000 * sqrt(sum((partials_cmr^2) * se_est[5:8]^2))
+
+# Coeficiente de variación
+cv_cmr <- (se_cmr / CMR) * 100
+
+CMR
+se_cmr
+cv_cmr
+```
+
+### 5.3 Tasa de Mortalidad en menores de cinco años (U5MR)
+
+```{r, echo=TRUE, include=TRUE}
+# U5MR: Mortalidad acumulada de 0 a 59 meses
+U5MR <- (1 - prod(1 - q_est[1:8])) * 1000
+
+# Error estándar con regla delta
+partials_u5mr <- sapply(1:8, function(j) prod(1 - q_est[-j]))
+se_u5mr <- 1000 * sqrt(sum((partials_u5mr^2) * se_est[1:8]^2))
+
+# Coeficiente de variación (CV)
+cv_u5mr <- (se_u5mr / U5MR) * 100
+
+U5MR
+se_u5mr
+cv_u5mr
+```
+## 6. Construcción indicadores mortaliy - Libreria DHS
+
+Se inicia con la limpieza del entorno de trabajo, la carga de las librerías necesarias y la lectura de las bases de datos brutas extraídas del módulo de mujeres y de nacimientos.
+
+Es importante tener en cuenta que:
+
+- Si no se tiene instalada la librería `DHS.rates`, se debe instalar previamente con el siguiente comando:
+
+
+```{r , echo=TRUE, include=FALSE}
+if (!requireNamespace("DHS.rates", quietly = TRUE)) {
+  remotes::install_github("maczokni/DHS.rates")
+}
+
+library(DHS.rates)
+library(dplyr)
+library(writexl)
+
+```
+
+```{r, echo=TRUE}
+base_MEF_bruta <- read.csv(file.path(input, "REC0111_2024.csv"), stringsAsFactors = FALSE)# Modulo mujeres en edad fertil 12 - 49 años
+base_emb_bruta <- read.csv(file.path(input, "REC21_2024.csv"), stringsAsFactors = FALSE) #Historial de embarazos
+```
+
+Ambas bases deben integrarse mediante el identificador `CASEID`, y las variables deben estar en **minúsculas**, ya que `DHS.rates` es sensible a los nombres exactos según el estándar DHS.
+
+```{r, echo=TRUE}
+# Unir la base de mujeres
+base_emb_f <-left_join(base_emb_bruta, base_MEF_bruta %>% select("V008","V021", "V022", "V005", "CASEID" ),by = "CASEID") 
+
+# Convertir nombres a minúsculas para estandarizar
+names(base_emb_f) <- tolower(names(base_emb_f))
+
+```
+
+La función chmort() permite estimar automáticamente los siguientes indicadores:
+
+- NNMR: Tasa de mortalidad neonatal (0–30 días)
+
+- PNNMR: Tasa de mortalidad posneonatal (1–11 meses)
+
+- IMR: Tasa de mortalidad infantil (0–11 meses)
+
+- CMR: Tasa de mortalidad de la niñez (12–59 meses)
+
+- U5MR: Tasa de mortalidad en menores de cinco años (0–59 meses)
+
+Internamente, chmort() aplica los criterios estándar DHS de truncamiento de exposición, imputación de edad a la muerte y ponderación según el diseño muestral.
+
+
+```{r, echo=TRUE, include=TRUE}
+(chmort(base_emb_f))
+
+```
+

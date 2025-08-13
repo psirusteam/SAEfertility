@@ -1,0 +1,8 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.csv
+Modelo_area/PER_2024/0funciones/
+Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/*.rds**/output/*.rds
+*.rds
