@@ -123,6 +123,8 @@ temp %<>% gather(key = "Metodo", value = "Estimacion",
 a <- ggplot(data = temp, aes(x = id, y = Estimacion, shape = Metodo)) +
   geom_jitter(aes(color = Metodo), size = 2) +
   theme_bw(10) + 
+  geom_line(aes(y = low_dam), linetype  = 2) +
+  geom_line(aes(y = upp_dam),  linetype  = 2) +
   scale_x_continuous(breaks = temp$id,
                      labels =  temp$dam) +
   labs(y = "", x = "")
