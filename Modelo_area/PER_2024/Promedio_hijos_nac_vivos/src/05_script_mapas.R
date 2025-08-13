@@ -96,7 +96,7 @@ mapa <- tm_shape(data) +
     style = "fixed",
     breaks = brks,
     colorNA = "grey90",
-    lwd = 0.2, border.col = "grey"
+    lwd = 0.2, border.col = "white"
   )
 
 tmap_save(
@@ -104,6 +104,17 @@ tmap_save(
   filename = file.path("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_mapa.jpeg"),
   width = 3000, height = 1500, dpi = 300
 )
+
+tmap_save(
+  tmap_arrange(mapa),
+  filename = file.path(
+    "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_mapa.pdf"
+  ),
+  width = 16,    # ancho en pulgadas (ajústalo según quieras más grande)
+  height = 8,    # alto en pulgadas
+  units = "in"   # especifica que es en pulgadas
+)
+
 
 brks_cv <- c (0,0.1, 0.2, 0.3, 0.4, 0.5, 0.6 )
 
@@ -116,13 +127,23 @@ mapa_cv <- tm_shape(data) +
     style = "fixed",
     breaks = brks_cv,
     colorNA = "grey90",
-    lwd = 0.2, border.col = "grey"
+    lwd = 0.2, border.col = "white"
   )
 
 tmap_save(
   tmap_arrange(mapa_cv),
   filename = file.path("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_CV_mapa.jpeg"),
   width = 3000, height = 1500, dpi = 300
+)
+
+tmap_save(
+  tmap_arrange(mapa_cv),
+  filename = file.path(
+    "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_CV_mapa.pdf"
+  ),
+  width = 16,    
+  height = 8,    
+  units = "in" 
 )
 
 
