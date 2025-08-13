@@ -85,6 +85,7 @@ base_emb <- base_emb %>% mutate(
     id_individual, ord_nac, cant_hij_parto, day_nac, mont_nac,
     year_nac, date_nac_hij, sex_hij, vivo_hij, edad_muerte,
     edad_muerte_imp, edad_actual_hij
+    
   )
 
 # Variables a heredar de base_MEF

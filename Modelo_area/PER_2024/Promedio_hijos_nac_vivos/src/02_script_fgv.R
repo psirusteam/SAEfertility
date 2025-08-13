@@ -94,6 +94,7 @@ est_dir_FGV <- left_join(est_dir_FGV, hat.sigma)
 #Validacion del modelo, buscar el supuesto de normalidad 
 #con otras transformaciones
 par(mfrow = c(2, 2))
+
 plot(FGV1)
 
 #Comparando variancia estimada versus pronosticada

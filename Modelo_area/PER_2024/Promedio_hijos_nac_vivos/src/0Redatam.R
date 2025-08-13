@@ -22,6 +22,7 @@ peru <- redatam.open("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input/cpv-pe
 redatam.entities(peru)
 redatam.variables(peru, "VIVIENDA")
 redatam.variables(peru, "PERSONA")
+redatam.variables(peru, "HOGAR")
 
 CONTEOS <- redatam.query(peru, "freq DISTRITO.REDCODE
                                   by PERSONA.C5P041

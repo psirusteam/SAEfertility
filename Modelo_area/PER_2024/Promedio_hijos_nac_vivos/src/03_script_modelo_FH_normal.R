@@ -118,8 +118,6 @@ info_satelitales <- info_satelitales %>%
 info_covariables <- left_join(info_covariables, info_satelitales, by = "dame") 
 
 #Crear dummies por dpto
-
-
 info_covariables <- fastDummies::dummy_cols(info_covariables,
                                             select_columns = "depto",
                                             remove_selected_columns = TRUE)

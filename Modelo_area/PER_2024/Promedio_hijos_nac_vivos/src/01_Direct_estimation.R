@@ -116,6 +116,7 @@ saveRDS(
   "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimación_directa_dam.rds"
 )
 
+
 #CRITERIOS DE CALIDAD------------------------------------
 ##Excluyendo registros por falta de calidad
 #base datos excluyendo los registros que cumplen criterios de calidad para 
