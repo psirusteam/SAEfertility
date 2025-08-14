@@ -101,7 +101,7 @@ mapa <- tm_shape(data) +
 
 tmap_save(
   tmap_arrange(mapa),
-  filename = file.path("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_mapa.jpeg"),
+  filename = file.path("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_mapa_2.jpeg"),
   width = 3000, height = 1500, dpi = 300
 )
 
@@ -139,7 +139,7 @@ tmap_save(
 tmap_save(
   tmap_arrange(mapa_cv),
   filename = file.path(
-    "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_CV_mapa.pdf"
+    "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_CV_mapa_2.pdf"
   ),
   width = 16,    
   height = 8,    
