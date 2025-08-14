@@ -24,8 +24,9 @@ getwd()
 ################################################################################
 
 base_MEF <- read.csv("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input/REC0111_2024.csv")# Modulo mujeres en edad fertil 12 - 49 años
-base_emb <- read.csv("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input/REC21_2024.csv") #Historial de embarazos
 
+
+base_emb <- read.csv("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input/REC21_2024.csv") #Historial de embarazos
 
 # --------------------------------------#
 #            Woman module               #

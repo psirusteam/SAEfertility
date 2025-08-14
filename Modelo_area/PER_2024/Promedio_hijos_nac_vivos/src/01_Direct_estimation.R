@@ -134,4 +134,7 @@ base_sae <- estimacion %>% data.frame()%>%
     deff_muni = p_deff        # Deff por dominio municipal
   )
 
-saveRDS(base_sae, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimación_directa_phv.rds")
+saveRDS(
+  base_sae,
+  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimación_directa_phv.rds"
+)

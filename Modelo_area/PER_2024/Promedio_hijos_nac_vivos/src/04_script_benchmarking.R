@@ -135,14 +135,19 @@ ggsave(plot = a,
        filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_2.jpeg",
        scale = 3)
 
-saveRDS(estimacionesBench, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench_2.rds")
+saveRDS(
+  estimacionesBench,
+  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench_2.rds"
+)
 
 
-##Comparación: Estimación hijos nacidos vivos 2024------------------------------
-##hijos nacidos vivos 2017 Censp------------------------------------------------
+##Comparación: Estimación mean hijos nacidos vivos 2024-------------------------
+## vs meanhijos nacidos vivos 2017 Censo----------------------------------------
 
 
-estimacionesBench <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench_2.rds")
+estimacionesBench <- readRDS(
+  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench_2.rds"
+)
 censo_hijos_nc <- readRDS(
   "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/censo_hijos_nacidos.rds"
 )
