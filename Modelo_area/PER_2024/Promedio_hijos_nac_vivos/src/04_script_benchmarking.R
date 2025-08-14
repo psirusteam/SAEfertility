@@ -136,3 +136,48 @@ ggsave(plot = a,
        scale = 3)
 
 saveRDS(estimacionesBench, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench_2.rds")
+
+
+##Comparación: Estimación hijos nacidos vivos 2024------------------------------
+##hijos nacidos vivos 2017 Censp------------------------------------------------
+
+
+estimacionesBench <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench_2.rds")
+censo_hijos_nc <- readRDS(
+  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/censo_hijos_nacidos.rds"
+)
+compa <- left_join(estimacionesBench, censo_hijos_nc, by = c("dam","dame"))
+
+#Modelo de regresion
+
+modelo <- lm(theta_pred_RBench ~ 0 + hijos_nacidos_2017, data = compa)
+summary(modelo)
+
+ggplot(compa, aes(x = hijos_nacidos_2017, y = theta_pred)) +
+  geom_point(alpha = 0.6) +        
+  geom_abline(slope = 1, intercept = 0, linetype = 1, colour = "red") +  # 45°
+  scale_size(range = c(1.5, 6), guide = "none") +
+  labs(
+    title   = "Hijos nacidos 2017 vs. Predicción (theta_pred)",
+    x       = "Hijos nacidos vivos 2017",
+    y       = "Predicción (theta_pred)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+ggplot(compa, aes(x = hijos_nacidos_2017, y = theta_pred_RBench)) +
+  geom_point(alpha = 0.6) +        
+  geom_abline(slope = 1, intercept = 0, linetype = 1, colour = "red") +  # 45°
+  geom_smooth(method = "lm", formula = y ~ 0 + x, se = FALSE,
+              color = "blue", linewidth = 1) +   
+  scale_size(range = c(1.5, 6), guide = "none") +
+  labs(
+    title   = "Hijos nacidos 2017 vs. Predicción (theta_pred_bench)",
+    x       = "Hijos nacidos vivos 2017",
+    y       = "Predicción (theta_pred_bench)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+
+

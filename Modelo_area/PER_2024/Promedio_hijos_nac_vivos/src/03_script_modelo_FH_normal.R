@@ -120,7 +120,7 @@ info_satelitales <- info_satelitales %>%
   )
 
 info_covariables <- left_join(info_covariables, info_satelitales, by = "dame") %>% 
-  left_join(censo_hijos_nc %>% select(-c("dam")) , by = "dame")
+  left_join(censo_hijos_nc %>% dplyr :: select(-c("dam")) , by = "dame")
 
 #Crear dummies por dpto
 info_covariables <- fastDummies::dummy_cols(info_covariables,
@@ -134,7 +134,7 @@ info_covariables <- fastDummies::dummy_cols(info_covariables,
 #Union full entre encuesta y covariables administrativas
 base_FH <- full_join(est_dir, info_covariables, by = "dame" )
 
-saveRDS(base_FH, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/Base_FH.rds")
+saveRDS(base_FH, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/Base_FH_2.rds")
 
 ##Preparando los insumos para STAN-----------------------------------------------
 
@@ -174,6 +174,7 @@ sample_data <- list(
   sigma_e = sqrt(data_dir$hat_var)  # Error de estimación
 )
 
+
 fit_FH_normal <- "Modelo_area/PER_2024/0funciones/17FH_normal.stan"
 options(mc.cores = parallel::detectCores())
 rstan::rstan_options(auto_write = TRUE) # speed up running time 
@@ -181,8 +182,8 @@ model_FH_normal <- stan(
   file = fit_FH_normal,  
   data = sample_data,   
   verbose = FALSE,
-  warmup = 11000,   #iter - 1000      
-  iter = 12000,            
+  warmup = 14000,   #iter - 1000      
+  iter = 15000,            
   cores = 4,
   seed = 11082025,
   control = list(
@@ -236,6 +237,37 @@ data_dir %<>% mutate(
   Cv_theta_pred = theta_pred_EE/theta_pred,
   doble_theta_pred_EE = theta_pred_EE*2
 ) 
+
+## Revisión betas
+cov_names <- colnames(sample_data$X)
+j <- match("hijos_nacidos_2017", cov_names)
+
+betas_mat <- rstan::extract(model_FH_normal, pars = "beta")$beta  # [n_draws x K]
+beta_draws <- betas_mat[, j]
+betas_df <- tibble(beta = beta_draws)
+
+
+ggplot(betas_df, aes(x = beta)) +
+  geom_histogram(
+    aes(y = ..density..),
+    bins = 15,
+    fill = "skyblue",
+    color = "white",
+    alpha = 0.7
+  ) +
+  geom_density(linewidth = 1) +
+  stat_function(
+    fun = dnorm,
+    args = list(mean = mean(betas_df$beta), sd = sd(betas_df$beta)),
+    color = "red",
+    size = 1
+  ) +
+  labs(
+    title = "Distribución del beta – Hijos nacidos vivos",
+    x = "Beta", y = "Densidad"
+  )  + theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        panel.grid.minor = element_blank())
 
 ## Qqplot de los efectos aleatorios
 
@@ -332,7 +364,6 @@ p3 <- ggplot(data = data.frame(y = residual_stan,
     panel.grid.minor = element_blank()
   )
 
-(p1|p2)/p3
 p_comb <- (p1|p2)/p3 ; p_comb
 
 ggsave(plot = p_comb,
@@ -407,9 +438,9 @@ dim(data_estimacion)
 #Guardar la base de las estimaciones
 saveRDS(data_estimacion, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_2.rds")
 
-ggplot(data_estimacion, aes(x = dame, y = thetaFH)) +
+ggplot(censo_hijos_nc, aes(x = dame, y = hijos_nacidos_2017)) +
   geom_point(color = "blue", size = 2) +
   labs(title = "",
        x = "dame",
-       y = "thetaFH") +
+       y = "hijos_nacidos_2017") +
   theme_minimal()
