@@ -37,7 +37,7 @@ library(bayesplot)
 library(posterior)
 library(patchwork)
 library(fastDummies)
-library(performance)
+
 
 
 ################################################################################
@@ -54,6 +54,10 @@ est_dir <- est_dir %>%
 info_covariables <- readRDS(
   "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input/statelevel_predictors_df_dame.rds"
 ) %>% rename(dame = dam2)
+
+censo_hijos_nc <- readRDS(
+  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/censo_hijos_nacidos.rds"
+)
 
 info_satelitales <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input/satelitales_dame.rds") %>%
   dplyr :: select(-c("tasa_desocupacion")) %>%
@@ -115,7 +119,8 @@ info_satelitales <- info_satelitales %>%
     })
   )
 
-info_covariables <- left_join(info_covariables, info_satelitales, by = "dame") 
+info_covariables <- left_join(info_covariables, info_satelitales, by = "dame") %>% 
+  left_join(censo_hijos_nc %>% select(-c("dam")) , by = "dame")
 
 #Crear dummies por dpto
 info_covariables <- fastDummies::dummy_cols(info_covariables,
@@ -176,8 +181,8 @@ model_FH_normal <- stan(
   file = fit_FH_normal,  
   data = sample_data,   
   verbose = FALSE,
-  warmup = 9000,   #iter - 1000      
-  iter = 10000,            
+  warmup = 11000,   #iter - 1000      
+  iter = 12000,            
   cores = 4,
   seed = 11082025,
   control = list(
@@ -186,9 +191,9 @@ model_FH_normal <- stan(
   ))
 
 saveRDS(object = model_FH_normal,
-        file = "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/model_FH_normal.rds")
+        file = "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/model_FH_normal_2.rds")
 
-model_FH_normal <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/model_FH_normal.rds")
+model_FH_normal <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/model_FH_normal_2.rds")
 
 
 # Grafico de las predicciones
@@ -199,7 +204,7 @@ y_pred2 <- y_pred_B[rowsrandom, ]#de las 4k toma 500 lineas aleatorias
 a <- ppc_dens_overlay(y = as.numeric(data_dir$hijos_nacidos), y_pred2)
 
 ggsave(plot = a,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal.jpeg", 
+       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_2.jpeg", 
        scale = 3)
 
 #Analisis del grafico de la convergencia de las cadenas de sigma cuadrado_u
@@ -275,7 +280,7 @@ p2 <- ggplot(data = data.frame(y = efectos_aleatorios$mean), aes(sample = y)) +
 p_comb <- p1 | p2 ; p_comb
 
 ggsave(plot = p_comb,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_efectos_aleatorios.jpeg",
+       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_efectos_aleatorios_2.jpeg",
        scale = 5)
 
 
@@ -331,7 +336,7 @@ p3 <- ggplot(data = data.frame(y = residual_stan,
 p_comb <- (p1|p2)/p3 ; p_comb
 
 ggsave(plot = p_comb,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_residuales.jpeg",
+       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_residuales_2.jpeg",
        scale = 5)
 
 
@@ -365,7 +370,7 @@ p22 <- ggplot(data_dir, aes(x = thetadir, y = thetaSyn)) +
 a <- (p11+p12)/(p21+p22)
 
 ggsave(plot = a,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_comparaciones.jpeg", 
+       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_comparaciones_2.jpeg", 
        scale = 3)
 
 #Estimacion del FH en los dominios NO observados
@@ -400,7 +405,7 @@ dim(data_estimacion)
 
 
 #Guardar la base de las estimaciones
-saveRDS(data_estimacion, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH.rds")
+saveRDS(data_estimacion, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_2.rds")
 
 ggplot(data_estimacion, aes(x = dame, y = thetaFH)) +
   geom_point(color = "blue", size = 2) +
