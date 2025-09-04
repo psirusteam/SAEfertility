@@ -44,7 +44,7 @@ library(fastDummies)
 ################################################################################
 
 FH_estimacion <- readRDS(
-  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_2.rds")
+  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH.rds")
 
 censo <- readRDS(
   "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/censo_muj_15_49.rds")
@@ -132,12 +132,12 @@ a <- ggplot(data = temp, aes(x = id, y = Estimacion, shape = Metodo)) +
 a
 
 ggsave(plot = a,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_2.jpeg",
+       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking.jpeg",
        scale = 3)
 
 saveRDS(
   estimacionesBench,
-  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench_2.rds"
+  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench.rds"
 )
 
 
@@ -146,7 +146,7 @@ saveRDS(
 
 
 estimacionesBench <- readRDS(
-  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench_2.rds"
+  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench.rds"
 )
 censo_hijos_nc <- readRDS(
   "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/censo_hijos_nacidos.rds"

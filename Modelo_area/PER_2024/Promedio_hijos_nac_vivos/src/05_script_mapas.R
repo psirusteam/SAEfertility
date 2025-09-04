@@ -49,7 +49,7 @@ library(ggplot2)
 ShapeSAE<-read_sf("Modelo_area/PER_2024/shape/DISTRITOS.shp")
 
 FH_estimacion_bench <- readRDS(
-  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench_2.rds"
+  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench.rds"
 )
 
 cols_to_avg <- c( "theta_pred", "Cv_theta_pred","theta_pred_RBench" )
@@ -101,14 +101,14 @@ mapa <- tm_shape(data) +
 
 tmap_save(
   tmap_arrange(mapa),
-  filename = file.path("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_mapa_2.jpeg"),
+  filename = file.path("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_mapa.jpeg"),
   width = 3000, height = 1500, dpi = 300
 )
 
 tmap_save(
   tmap_arrange(mapa),
   filename = file.path(
-    "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_mapa_2.pdf"
+    "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_mapa.pdf"
   ),
   width = 16,    # ancho en pulgadas (ajústalo según quieras más grande)
   height = 8,    # alto en pulgadas
@@ -132,14 +132,14 @@ mapa_cv <- tm_shape(data) +
 
 tmap_save(
   tmap_arrange(mapa_cv),
-  filename = file.path("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_CV_mapa_2.jpeg"),
+  filename = file.path("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_CV_mapa.jpeg"),
   width = 3000, height = 1500, dpi = 300
 )
 
 tmap_save(
   tmap_arrange(mapa_cv),
   filename = file.path(
-    "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_CV_mapa_2.pdf"
+    "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_CV_mapa.pdf"
   ),
   width = 16,    
   height = 8,    

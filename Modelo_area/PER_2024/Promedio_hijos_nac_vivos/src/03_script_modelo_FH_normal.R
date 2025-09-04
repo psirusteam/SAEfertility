@@ -134,7 +134,7 @@ info_covariables <- fastDummies::dummy_cols(info_covariables,
 #Union full entre encuesta y covariables administrativas
 base_FH <- full_join(est_dir, info_covariables, by = "dame" )
 
-saveRDS(base_FH, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/Base_FH_2.rds")
+saveRDS(base_FH, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/Base_FH.rds")
 
 ##Preparando los insumos para STAN-----------------------------------------------
 
@@ -192,9 +192,9 @@ model_FH_normal <- stan(
   ))
 
 saveRDS(object = model_FH_normal,
-        file = "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/model_FH_normal_2.rds")
+        file = "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/model_FH_normal.rds")
 
-model_FH_normal <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/model_FH_normal_2.rds")
+model_FH_normal <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/model_FH_normal.rds")
 
 
 # Grafico de las predicciones
@@ -205,7 +205,7 @@ y_pred2 <- y_pred_B[rowsrandom, ]#de las 4k toma 500 lineas aleatorias
 a <- ppc_dens_overlay(y = as.numeric(data_dir$hijos_nacidos), y_pred2)
 
 ggsave(plot = a,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_2.jpeg", 
+       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal.jpeg", 
        scale = 3)
 
 #Analisis del grafico de la convergencia de las cadenas de sigma cuadrado_u
@@ -238,36 +238,6 @@ data_dir %<>% mutate(
   doble_theta_pred_EE = theta_pred_EE*2
 ) 
 
-## Revisión betas
-cov_names <- colnames(sample_data$X)
-j <- match("hijos_nacidos_2017", cov_names)
-
-betas_mat <- rstan::extract(model_FH_normal, pars = "beta")$beta  # [n_draws x K]
-beta_draws <- betas_mat[, j]
-betas_df <- tibble(beta = beta_draws)
-
-
-ggplot(betas_df, aes(x = beta)) +
-  geom_histogram(
-    aes(y = ..density..),
-    bins = 15,
-    fill = "skyblue",
-    color = "white",
-    alpha = 0.7
-  ) +
-  geom_density(linewidth = 1) +
-  stat_function(
-    fun = dnorm,
-    args = list(mean = mean(betas_df$beta), sd = sd(betas_df$beta)),
-    color = "red",
-    size = 1
-  ) +
-  labs(
-    title = "Distribución del beta – Hijos nacidos vivos",
-    x = "Beta", y = "Densidad"
-  )  + theme_minimal(base_size = 14) +
-  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
-        panel.grid.minor = element_blank())
 
 ## Qqplot de los efectos aleatorios
 
@@ -288,7 +258,7 @@ p1 <- ggplot(data = data.frame(y = efectos_aleatorios$mean), aes(x = y)) +
     color = "red",
     size = 1
   ) +
-  labs(title = "Distribución de los efectos aleatorios", x = "Residual", y = "Densidad") +
+  labs(title = "Distribución de los efectos aleatorios", x = "Efectos aleatorios", y = "Densidad") +
   theme_minimal(base_size = 14) +
   theme(plot.title = element_text(hjust = 0.5, face = "bold"),
         panel.grid.minor = element_blank())
@@ -298,7 +268,7 @@ p2 <- ggplot(data = data.frame(y = efectos_aleatorios$mean), aes(sample = y)) +
   stat_qq(color = "steelblue", size = 1) +
   stat_qq_line(color = "red", linetype = "dashed", size = 1) +
   labs(
-    title = "Q-Q Plot efectos aleatorios vs. Normal estándar",
+    title = "Q-Q Plot efectos aleatorios",
     x = "Cuantiles teóricos",
     y = "Cuantiles muestrales"
   ) +
@@ -312,7 +282,7 @@ p2 <- ggplot(data = data.frame(y = efectos_aleatorios$mean), aes(sample = y)) +
 p_comb <- p1 | p2 ; p_comb
 
 ggsave(plot = p_comb,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_efectos_aleatorios_2.jpeg",
+       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_efectos_aleatorios.jpeg",
        scale = 5)
 
 
@@ -344,7 +314,7 @@ p2 <- ggplot(data = data.frame(y = residual_stan), aes(sample = y)) +
   stat_qq(color = "steelblue", size = 1) +
   stat_qq_line(color = "red", linetype = "dashed", size = 1) +
   labs(
-    title = "Q-Q Plot vs. Normal estándar",
+    title = "Q-Q Plot de los residuales",
     x = "Cuantiles teóricos",
     y = "Cuantiles muestrales"
   ) +
@@ -354,21 +324,23 @@ p2 <- ggplot(data = data.frame(y = residual_stan), aes(sample = y)) +
     panel.grid.minor = element_blank()
   )
 
-p3 <- ggplot(data = data.frame(y = residual_stan,
-                       
-                         id = 1:length(predi_residuales))) +
-  geom_point(aes(y = y , x = id)) + 
-  geom_hline(yintercept  = 0) + theme_minimal(base_size = 14) +
-  theme(
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    panel.grid.minor = element_blank()
-  )
+p3 <- ggplot(data = data.frame(
+  id = 1:length(residual_stan), 
+  residuales = residual_stan),
+  aes(x = id, y = residuales)) +
+  geom_point(color = "blue") +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(
+       x = "Distritos",
+       y = "Residuales estandarizados") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
 
 p_comb <- (p1|p2)/p3 ; p_comb
 
 ggsave(plot = p_comb,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_residuales_2.jpeg",
-       scale = 5)
+       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_residuales.jpeg",
+       scale = 4)
 
 
 
@@ -401,7 +373,7 @@ p22 <- ggplot(data_dir, aes(x = thetadir, y = thetaSyn)) +
 a <- (p11+p12)/(p21+p22)
 
 ggsave(plot = a,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_comparaciones_2.jpeg", 
+       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_comparaciones.jpeg", 
        scale = 3)
 
 #Estimacion del FH en los dominios NO observados
@@ -436,7 +408,7 @@ dim(data_estimacion)
 
 
 #Guardar la base de las estimaciones
-saveRDS(data_estimacion, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_2.rds")
+saveRDS(data_estimacion, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH.rds")
 
 ggplot(censo_hijos_nc, aes(x = dame, y = hijos_nacidos_2017)) +
   geom_point(color = "blue", size = 2) +
