@@ -18,7 +18,6 @@ library(magrittr)
 library(labelled)
 library(survey)
 library(srvyr)
-library(gtsummary)
 library(epiDisplay)
 library(readxl)
 library(knitr)
@@ -44,28 +43,24 @@ library(fastDummies)
 ################################################################################
 
 est_dir <- readRDS(
-  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimación_directa_phv_FGV.rds"
+  "Modelo_area/PER_2024/IMR/output/estimación_directa_provi_IMR.rds"
 )
+
 est_dir <- est_dir %>%
-  mutate(dame = as.character(dame),
-         dame = if_else(nchar(dame) == 5, str_c("0", dame), dame))
+  mutate(provi = as.character(provincia),
+         provi = if_else(nchar(provi) == 3, str_c("0", provi), provi))
 
-info_covariables <- readRDS(
-  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input/statelevel_predictors_df_dame.rds"
-) %>% rename(dame = dam2)
+info_covariables <- readRDS("Modelo_area/PER_2024/IMR/input/statelevel_predictors_df_update_provi_muj.rds") %>% mutate(dam = str_sub(provi, 1, 2))
 
-info_satelitales <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input/satelitales_dame.rds") %>%
-  dplyr :: select(-c("tasa_desocupacion")) %>%
+info_satelitales <- readRDS("Modelo_area/PER_2024/IMR/input/satelitales_provincia.rds") %>%
   rename(
-    dame = mpio,
+    provi = provi,
     luces_nocturnas = F182013_stable_lights ,
     indice_mod_humano = X2016_gHM,
-    accesibilidad_hospitales = accessibility,
-    accesibilidad_hosp_caminando = accessibility_walking_only,
     cubrimiento_urbano = X2016_urban.coverfraction,
     cubrimiento_rural = X2016_crops.coverfraction
-  ) %>%
-  group_by(depto) %>%
+  ) %>% mutate(dam = str_sub(provi, 1, 2)) %>% 
+  group_by(dam) %>%
   mutate(
     luces_nocturnas = ifelse(
       is.na(luces_nocturnas),
@@ -76,16 +71,6 @@ info_satelitales <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input
       is.na(indice_mod_humano),
       mean(indice_mod_humano, na.rm = TRUE),
       indice_mod_humano
-    ),
-    accesibilidad_hospitales = ifelse(
-      is.na(accesibilidad_hospitales),
-      mean(accesibilidad_hospitales, na.rm = TRUE),
-      accesibilidad_hospitales
-    ),
-    accesibilidad_hosp_caminando = ifelse(
-      is.na(accesibilidad_hosp_caminando),
-      mean(accesibilidad_hosp_caminando, na.rm = TRUE),
-      accesibilidad_hosp_caminando
     ),
     cubrimiento_urbano = ifelse(
       is.na(cubrimiento_urbano),
@@ -100,47 +85,51 @@ info_satelitales <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input
   ) %>%
   ungroup()
 
-# Normalización global (media 0, sd 1) variable por variable
+info_covariables <- info_covariables %>%
+  left_join(info_satelitales %>% dplyr::select(-c("dam")),   by = "provi") 
+
+# Normalización global (min y max) variable por variable
 vars <- c("luces_nocturnas","indice_mod_humano",
-          "accesibilidad_hospitales","accesibilidad_hosp_caminando",
-          "cubrimiento_urbano","cubrimiento_rural")
+          "cubrimiento_urbano","cubrimiento_rural", "mean_hijos")
 
-info_satelitales <- info_satelitales %>%
-  dplyr::ungroup() %>%
-  dplyr::mutate(
-    dplyr::across(dplyr::all_of(vars), ~{
-      m <- mean(., na.rm=TRUE); s <- sd(., na.rm=TRUE)
-      if (is.na(s) || s == 0) 0 else (.-m)/s
-    })
-  )
 
-info_covariables <- left_join(info_covariables, info_satelitales, by = "dame") 
+info_covariables <- info_covariables %>%
+  ungroup() %>%
+  mutate(across(all_of(vars), ~ {
+    mn <- min(., na.rm = TRUE)
+    mx <- max(., na.rm = TRUE)
+    if (is.finite(mn) & is.finite(mx) & mx > mn) {
+      (. - mn) / (mx - mn)
+    } else {
+      NA_real_
+    }
+  }))
 
 #Crear dummies por dpto
 
-info_covariables <- dummy_cols(info_covariables, select_columns = "depto",remove_selected_columns = TRUE)
+info_covariables <- dummy_cols(info_covariables, select_columns = "dam",remove_selected_columns = TRUE)
 
 ################################################################################
 ###------------------------Modelo FAY HARRIOT NORMAL-------------------------###
 ################################################################################
 
 #Union full entre encuesta y covariables administrativas
-base_FH <- full_join(est_dir, info_covariables, by = "dame" )
-
-saveRDS(base_FH, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/Base_FH.rds")
+base_FH <- full_join(est_dir, info_covariables, by = "provi" )
+summary(base_FH)
+saveRDS(base_FH, "Modelo_area/PER_2024/IMR/output/Base_FH.rds")
 
 ##Preparando los insumos para STAN-----------------------------------------------
 
 #Dominios observados
-data_dir <- base_FH %>% filter(!is.na(hijos_nacidos))
+data_dir <- base_FH %>% filter(!is.na(IMR))
 #Dominios no observados
 data_syn <-
-  base_FH %>% anti_join(data_dir %>% dplyr:: select(dame))
+  base_FH %>% anti_join(data_dir %>% dplyr:: select(provi))
 
 #modelo1, full - definiendo matriz de efectos fijos
 
 nombres <- names(info_covariables)
-nombres <- nombres[!(nombres %in% c("dame", "depto"))]
+nombres <- nombres[!(nombres %in% c("provi", "depto"))]
 
 
 my_formula1_full <- as.formula(                      
@@ -163,8 +152,8 @@ sample_data <- list(
   p  = ncol(Xdat),       # Número de regresores.
   X  = as.matrix(Xdat),  # Covariables Observados.
   Xs = as.matrix(Xs),    # Covariables NO Observados
-  y  = as.numeric(data_dir$hijos_nacidos), # Estimación directa
-  sigma_e = sqrt(data_dir$hat_var)  # Error de estimación
+  y  = as.numeric(data_dir$IMR), # Estimación directa
+  sigma_e = sqrt(data_dir$vardir)  # Error de estimación
 )
 
 fit_FH_normal <- "Modelo_area/PER_2024/0funciones/17FH_normal.stan"
@@ -177,16 +166,17 @@ model_FH_normal <- stan(
   warmup = 9000,   #iter - 1000      
   iter = 10000,            
   cores = 4,
+  chains = 2,
   seed = 11082025,
   control = list(
     adapt_delta   = 0.99,
-    max_treedepth = 12
+    max_treedepth = 10
   )
   
   )
 
 saveRDS(object = model_FH_normal,
-        file = "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/model_FH_normal.rds")
+        file = "Modelo_area/PER_2024/IMR/output/model_FH_normal.rds")
 
 y_pred_B <- as.array(model_FH_normal, pars = "theta") %>% 
   as_draws_matrix()
@@ -195,7 +185,7 @@ y_pred2 <- y_pred_B[rowsrandom, ]#de las 4k toma 500 lineas aleatorias
 a <- ppc_dens_overlay(y = as.numeric(data_dir$hijos_nacidos), y_pred2)
 
 ggsave(plot = a,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal.jpeg", 
+       filename =  "Modelo_area/PER_2024/IMR/output/modelo_FH_normal.jpeg", 
        scale = 3)
 
 #Analisis del grafico de la convergencia de las cadenas de sigma cuadrado_u
@@ -252,7 +242,7 @@ p22 <- ggplot(data_dir, aes(x = thetadir, y = thetaSyn)) +
 a <- (p11+p12)/(p21+p22)
 
 ggsave(plot = a,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_comparaciones.jpeg", 
+       filename =  "Modelo_area/PER_2024/IMR/output/modelo_FH_normal_comparaciones.jpeg", 
        scale = 3)
 
 #Estimacion del FH en los dominios NO observados
@@ -287,4 +277,4 @@ dim(data_estimacion)
 
 
 #Guardar la base de las estimaciones
-saveRDS(data_estimacion, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH.rds")
+saveRDS(data_estimacion, "Modelo_area/PER_2024/IMR/output/estimacion_promedio_hij_vivos_FH.rds")

@@ -22,8 +22,17 @@ library(writexl)
 ###----------------------------- Loading datasets ---------------------------###
 ################################################################################
 
-base_nacimientos <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/base_nacimientos.rds")
+base_MEF <- read.csv("Modelo_area/PER_2024/IMR/input/REC0111_2024.csv") # Modulo mujeres en edad fertil 12 - 49 años
+base_MEF <- base_MEF %>% filter(!is.na(V101)) %>% mutate(
+  UBIGEO = str_pad(
+    string = UBIGEO, 
+    width = 6,           
+    side = "left",      
+    pad = "0"           
+  ),
+  provincia = str_sub(UBIGEO, start = 1, end = 4))
 
+base_emb <- read.csv("Modelo_area/PER_2024/IMR/input/REC21_2024.csv") #Historial de embarazos
 
 ################################################################################
 ###----------------------------- Direct estimation --------------------------###
@@ -33,161 +42,167 @@ base_nacimientos <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/outpu
 #        Infant  mortality rate         #
 # --------------------------------------#
 
-# Inicializar lista para resultados dame
-resultados_por_dame <- list()
+# Unir la base de mujeres
+base_total <- left_join(base_emb,
+                        base_MEF %>% dplyr::select("V008", "V021", "V022", "V005", "CASEID", "V101","UBIGEO"),
+                        by = "CASEID") %>% rename(dame = UBIGEO) %>% rename(dam = V101)
 
-base_imr <- base_nacimientos %>%
-  filter(!is.na(date_nac_hij)) %>%
-  mutate(
-    rweight = fep_m / 1e6,             #  Ponderador 
-    tu = date_entrevista,              # Fecha entrevista 
-    tl = date_entrevista - 60          # 5 años antes (periodo de referencia)
-  )
+# Convertir nombres a minúsculas para estandarizar
+names(base_total) <- tolower(names(base_total))
 
-segmentos <- list("1" = c(0, 1),"2" = c(1, 3),"3" = c(3, 6),"4" = c(6, 12),"5" = c(12, 24),"6" = c(24, 36),"7" = c(36, 48),"8" = c(48, 60))
-# Inicializamos vector de resultados
+base_total <- base_total %>% mutate(
+  v021_0 = as.integer(factor(v021)),
+  dame = str_pad(
+    string = dame, 
+    width = 6,           
+    side = "left",      
+    pad = "0"           
+  ),
+  provincia = str_sub(dame, start = 1, end = 4))
 
-q_est <- numeric()
-se_est <- numeric()
 
+#dam
+dam <- unique(base_total$dam)
+res  <- vector("list", length(dam))
+names(res) <- dam
 
-# Iterar por cada grupo dame
-for (grupo in unique(base_imr$dame)) {
+for (i in seq_along(dam)) {
+  a <- dam[i]
   
-  base_dame <- base_imr %>% filter(dame == grupo)
+  data <- base_total %>%
+    filter(dam == a) %>%
+    mutate(v021_dam = as.integer(factor(v021))) %>%
+    ungroup()
   
-  q_est <- numeric()
-  se_est <- numeric()
   
-  for (i in names(segmentos)) {
-    a1 <- segmentos[[i]][1]
-    a2 <- segmentos[[i]][2]
-    
-    seg <- base_dame %>%
-      filter(is.na(edad_muerte_imp) | edad_muerte_imp >= a1) %>%
-      mutate(
-        exposure = case_when(
-          date_nac_hij >= (tl - a2) & date_nac_hij < (tl - a1) ~ 0.5,
-          date_nac_hij >= (tl - a1) & date_nac_hij < (tu - a2) ~ 1,
-          date_nac_hij >= (tu - a2) & date_nac_hij < (tu - a1) ~ 0.5,
-          TRUE ~ 0
-        ),
-        death = case_when(
-          date_nac_hij >= (tl - a2) & date_nac_hij < (tl - a1) & edad_muerte_imp >= a1 & edad_muerte_imp < a2 ~ 0.5,
-          date_nac_hij >= (tl - a1) & date_nac_hij < (tu - a2) & edad_muerte_imp >= a1 & edad_muerte_imp < a2 ~ 1,
-          date_nac_hij >= (tu - a2) & date_nac_hij < (tu - a1) & edad_muerte_imp >= a1 & edad_muerte_imp < a2 ~ ifelse(tu, 1, 0.5),
-          is.na(edad_muerte_imp) ~ 0,
-          TRUE ~ 0
-        )
-      ) %>%
-      filter(exposure > 0)
-    
-    disenio <- svydesign(
-      id = ~upm,
-      strata = ~strata,
-      weights = ~rweight,
-      data = seg,
-      nest = TRUE
-    )
-    
-    ratio <- svyratio(~death, ~exposure, disenio)
-    q_est[i] <- coef(ratio)
-    se_est[i] <- SE(ratio)
-  }
+  out <- chmort(
+    Data.Name = data,
+    JK        = "Yes",
+    Cluster = "v021_dam"
+  ) 
   
-  # Calcular IMR, CMR, U5MR
-  calc_mort <- function(indices) {
-    est <- (1 - prod(1 - q_est[indices])) * 1000
-    partials <- sapply(indices, function(j) prod(1 - q_est[setdiff(indices, j)]))
-    se <- 1000 * sqrt(sum((partials^2) * se_est[indices]^2))
-    cv <- (se / est) * 100
-    return(c(est = est, se = se, cv = cv))
-  }
+  df <- as.data.frame(out) %>%
+    rownames_to_column("indicador") %>%
+    filter(startsWith(indicador, "IMR")) %>%   # solo IMR
+    mutate(dam = a)
   
-  imr <- calc_mort(1:4)
-  cmr <- calc_mort(5:8)
-  u5mr <- calc_mort(1:8)
-  
-  resultados_por_dame[[as.character(grupo)]] <- data.frame(
-    dame = grupo,
-    IMR = imr["est"], se_IMR = imr["se"], cv_IMR = imr["cv"],
-    CMR = cmr["est"], se_CMR = cmr["se"], cv_CMR = cmr["cv"],
-    U5MR = u5mr["est"], se_U5MR = u5mr["se"], cv_U5MR = u5mr["cv"]
-  )
+  res[[i]] <- df           # guarda en la lista
 }
 
-#Step 1. Agrupar la base de nacimiento por mujeres
 
-base_nacxmuj <- base_nacimientos %>% filter(edad_actual >= 15 & edad_actual <=49) %>% 
-  group_by(id_individual) %>%
-  summarise(hijos_nacidos = n())
-
-#Step 2. Unir a la base de mujeres
-
-base_MEF <- base_MEF %>%
-  left_join(base_nacxmuj, by = "id_individual")  %>%
-  mutate(hijos_nacidos = ifelse(is.na(hijos_nacidos), 0, hijos_nacidos))
-
-base_MEF$fep_m <- base_MEF$fep_m/1000000
-
-#Step 3. Definir el objeto svydesign
-options(survey.lonely.psu = "adjust")
-
-diseno <- svydesign(
-  id = ~upm,
-  strata = ~strata,
-  weights = ~fep_m,
-  data = base_MEF,
-  nest = TRUE
-)
-
-svymean(~hijos_nacidos, diseno, vartype = c("se", "cv"), na.rm = TRUE)
-estimacion <- svyby(~hijos_nacidos,by = ~dam + dame,design = diseno,FUN = svymean,deff = TRUE,na.rm = TRUE)
-
-nupm <- base_MEF %>% distinct(dam,dame,upm) %>%
-  group_by(dam,dame) %>% 
-  tally()
-
-nd <- base_MEF %>%
-  group_by(dam, dame) %>%
-  summarise(nd = n(), .groups = "drop")
-
-estimacion <- estimacion %>% left_join(
-  nupm,  by = c("dam", "dame")) %>% left_join(
-  nd, by = c("dam", "dame")) %>% rename(p_deff = DEff.hijos_nacidos)
-
-
-
-#Estimacion directa al nivel de representatividad de la encuesta para benchmaring
-estimacion_dam <- svyby(
-  ~ hijos_nacidos,
-  by = ~ dam,
-  design = diseno,
-  FUN = svymean,
-  deff = TRUE,
-  na.rm = TRUE
-)
+estimacion_dam <- dplyr::bind_rows(res)
 
 saveRDS(
   estimacion_dam,
-  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimación_directa_dam.rds"
+  "Modelo_area/PER_2024/IMR/output/estimación_directa_dam.rds"
 )
+
+#provincia
+
+# primero excluimos 
+
+upm_estratos <- base_total %>%
+  group_by(provincia) %>%
+  summarise(
+    n_upm = n_distinct(v021, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+prov_validos <- upm_estratos %>%
+  filter(n_upm > 2) %>%
+  pull(provincia)
+
+# Ajustar la base
+base_filtrada <- base_total %>%
+  filter(provincia %in% prov_validos)
+
+
+provincia <- unique(base_filtrada$provincia)
+res  <- vector("list", length(provincia))
+names(res) <- provincia
+
+for (i in seq_along(provincia)) {
+  a <- provincia[i]
+  
+  data <- base_filtrada %>%
+    filter(provincia == a) %>%
+    mutate(v021_prov = as.integer(factor(v021))) %>%
+    ungroup()
+  
+  
+  out <- chmort(
+    Data.Name = data,
+    JK        = "Yes",
+    Cluster = "v021_prov"
+  )
+  
+  df <- as.data.frame(out) %>%
+    rownames_to_column("indicador") %>%
+    filter(startsWith(indicador, "IMR")) %>%   # solo IMR
+    mutate(provincia = a)
+  
+  res[[i]] <- df           # guarda en la lista
+}
+
+
+estimacion_prov <- dplyr::bind_rows(res) %>%
+  mutate(dam = case_when(
+    nchar(as.character(provincia)) == 4 ~ substr(as.character(provincia), 1, 2),
+    TRUE ~ NA_character_
+  )) %>% mutate(dam = as.integer(dam))
+
+# Número de UPMS
+nupm <- base_MEF %>% distinct(V101, provincia, V021)  %>% rename(dam = V101) %>%
+  group_by(dam, provincia) %>%
+  tally() %>% rename(n_upm = n)
+
+n_strata <- base_MEF %>% distinct(V101, provincia, V022)  %>% rename(dam = V101) %>%
+  group_by(dam, provincia) %>%
+  tally() %>% rename(n_strata = n)
+
+
+nd <- base_MEF  %>% rename(dam = V101) %>%
+  group_by(dam, provincia) %>%
+  summarise(nd = n(), .groups = "drop")
+
+estimacion_prov <- estimacion_prov %>% left_join(
+  nupm,  by = c("dam", "provincia")) %>% left_join(
+    nd, by = c("dam", "provincia"))%>% left_join(
+      n_strata, by = c("dam", "provincia")) %>% mutate(gl = n_upm - n_strata) 
+
+
 
 #CRITERIOS DE CALIDAD------------------------------------
 ##Excluyendo registros por falta de calidad
 #base datos excluyendo los registros que cumplen criterios de calidad para 
 #modelo sae
 
-base_sae <- estimacion %>% data.frame()%>%
-  filter(nd > 40, p_deff > 1, n >= 2) %>%
+
+# 
+# base_sae <- estimacion %>% data.frame()%>%
+#   filter(gl >= 2, nd > 30) %>%
+#   transmute(
+#     dam = dam,              # Id para los departamento
+#     dame = dame,              #Id para los distritos
+#     nd = nd,                # Número de observaciones por dominios
+#     IMR = R,              # Estimación de la variable
+#     vardir = SE ^ 2,      # Estimación de la varianza directa 
+#     cv = SE/IMR,   
+#     deff = DEFT,
+#     n_upm = n_upm # Numero de upm
+#   )
+
+base_sae <- estimacion_prov %>% data.frame()%>%
+  filter(gl >= 2, nd > 30) %>%
   transmute(
     dam = dam,              # Id para los departamento
-    dame = dame,              #Id para los distritos
+    provincia = provincia,              #Id para los distritos
     nd = nd,                # Número de observaciones por dominios
-    hijos_nacidos = hijos_nacidos,      # Estimación de la variable
-    vardir = se ^ 2,      # Estimación de la varianza directa 
-    cv = se/hijos_nacidos,                       
-    deff_muni = p_deff        # Deff por dominio municipal
+    IMR = R,              # Estimación de la variable
+    vardir = SE ^ 2,      # Estimación de la varianza directa 
+    cv = SE/IMR,   
+    deff = DEFT,
+    n_upm = n_upm # Numero de upm
   )
 
-saveRDS(base_sae, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimación_directa_phv.rds")
+saveRDS(base_sae, "Modelo_area/PER_2024/IMR/output/estimación_directa_provi_IMR.rds")
