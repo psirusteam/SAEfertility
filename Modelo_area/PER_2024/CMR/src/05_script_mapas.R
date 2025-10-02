@@ -18,7 +18,6 @@ library(magrittr)
 library(labelled)
 library(survey)
 library(srvyr)
-library(gtsummary)
 library(epiDisplay)
 library(readxl)
 library(knitr)
@@ -47,7 +46,10 @@ library(ggplot2)
 
 
 FH_estimacion_bench <- readRDS(
-  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH_bench.rds"
+  "Modelo_area/PER_2024/CMR/output/estimacion_CMR_bench_binomial_30092025.rds"
+) %>% mutate( 
+  CMR_media = round(if_else(CMR_media < 1 , 0, CMR_media),3),
+  CMR_cv = round(ifelse(is.na(CMR_cv) | CMR_media == 0 ,0,CMR_cv),3)
 )
 
 ################################################################################
@@ -56,25 +58,26 @@ FH_estimacion_bench <- readRDS(
 
 ##Leer shapefile de pais - Peru ------------------------------------------------
 
-ShapeSAE<-read_sf("Modelo_area/PER_2024/shape/DISTRITOS.shp")
+ShapeSAE<-read_sf("Modelo_area/PER_2024/shape/PROVINCIAS.shp")
 
 ##Unir información del shape a la base------------------------------------------
 
-data <- ShapeSAE %>% left_join(FH_estimacion_bench, by = c("IDDIST" = "dame")
+data <- ShapeSAE %>% left_join(FH_estimacion_bench, by = c("IDPROV" = "provi")
   ) #solo 1873 distritos?
 
 
-x <- data$theta_pred_RBench
+x <- data$CMR_media
 n_clases <- 6
 
 minx <- floor(min(x, na.rm = TRUE) * 10) / 10   
 maxx <- ceiling(max(x, na.rm = TRUE) * 10) / 10
 brks  <- seq(minx, maxx, length.out = n_clases + 1)
 
+tmap_options(check.and.fix = TRUE)
 mapa <- tm_shape(data) +
   tm_polygons(
-    col = "theta_pred_RBench",
-    title = "Pro_hij_n_v",
+    col = "CMR_media",
+    title = "CMR",
     palette = "YlOrRd",
     style = "fixed",
     breaks = brks,
@@ -84,17 +87,17 @@ mapa <- tm_shape(data) +
 
 tmap_save(
   tmap_arrange(mapa),
-  filename = file.path("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_mapa.jpeg"),
+  filename = file.path("Modelo_area/PER_2024/CMR/output/modelo_FH_normal_benchmarking_mapa_30092025.jpeg"),
   width = 3000, height = 1500, dpi = 300
 )
 
-brks_cv <- c (0,0.2, 0.3, 0.4,  0.6,0.8 ,1.0, 3.0)
+brks_cv <- c (0,0.2, 0.3, 0.4,  0.6,0.8 ,1.0)
 
 
 mapa_cv <- tm_shape(data) +
   tm_polygons(
-    col = "Cv_theta_pred",
-    title = "CV_prom_hij_n_v",
+    col = "CMR_cv",
+    title = "CV_CMR",
     palette = "YlOrRd",
     style = "fixed",
     breaks = brks_cv,
@@ -104,7 +107,7 @@ mapa_cv <- tm_shape(data) +
 
 tmap_save(
   tmap_arrange(mapa_cv),
-  filename = file.path("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_benchmarking_CV_mapa.jpeg"),
+  filename = file.path("Modelo_area/PER_2024/CMR/output/modelo_FH_normal_benchmarking_CV_mapa_30092025.jpeg"),
   width = 3000, height = 1500, dpi = 300
 )
 

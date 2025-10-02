@@ -17,7 +17,7 @@ library(Rcpp)
 library(RcppProgress)
 library(redatam)
 
-peru <- redatam.open("Modelo_area/PER_2024/TFR/input/cpv-per-2017-cde_diccionario.dicx")
+peru <- redatam.open("Modelo_area/PER_2024/ASFR/25-29/input/cpv-per-2017-cde_diccionario.dicx")
 
 redatam.entities(peru)
 redatam.variables(peru, "VIVIENDA")
@@ -52,7 +52,7 @@ map(grep(pattern = "_label", x = names(CONTEOS2),value = TRUE),
         mutate(Prop = n / sum(n), N = sum(n))
     })
 
-muj_15_49 <- CONTEOS2 %>%
+muj_25_29 <- CONTEOS2 %>%
   transmute(provi = str_pad(
     string = REDCODEN1_value,
     width = 4,
@@ -62,7 +62,7 @@ muj_15_49 <- CONTEOS2 %>%
   sexo = as.character(C5P023_value),
   edad = C5P0412_value,
   value)%>%
-  filter(edad >= 15 & edad <= 49 & sexo == 2) %>% group_by(dam,provi)%>%
+  filter(edad >= 25 & edad <= 29 & sexo == 2) %>% group_by(dam,provi)%>%
   summarise(n = sum(value), .groups = "drop")
 
 muj_total <- CONTEOS2 %>%
@@ -80,11 +80,11 @@ muj_total <- CONTEOS2 %>%
 
 
 # Suma del total mujeres de 15 a 49 años
-sum(muj_15_49$n)
+sum(muj_25_29$n)
 sum(muj_total$n)
 
-saveRDS(muj_15_49, "Modelo_area/PER_2024/TFR/output/censo_muj_15_49.rds")
-saveRDS(muj_total, "Modelo_area/PER_2024/TFR/output/censo_muj_total.rds")
+saveRDS(muj_25_29, "Modelo_area/PER_2024/ASFR/25-29/output/censo_muj_25_29.rds")
+saveRDS(muj_total, "Modelo_area/PER_2024/ASFR/25-29/output/censo_muj_total.rds")
 
 
 ## Promedio hijos nacidos vivos por dame ------------------------------------------
@@ -135,13 +135,13 @@ hijos_nacidos <- CONTEOS2 %>%
 
 saveRDS(
   hijos_nacidos,
-  "Modelo_area/PER_2024/TFR//output/censo_hijos_nacidos.rds"
+  "Modelo_area/PER_2024/ASFR/25-29//output/censo_hijos_nacidos.rds"
 )
 
 
 #################### Variables Censo ##########################################
 
-peru <- redatam.open("Modelo_area/PER_2024/TFR/input/cpv-per-2017-cde_diccionario.dicx")
+peru <- redatam.open("Modelo_area/PER_2024/ASFR/25-29/input/cpv-per-2017-cde_diccionario.dicx")
 
 
 redatam.entities(peru)
@@ -1304,7 +1304,7 @@ statelevel_predictors_df <- list(
   
   mutate_all(~ifelse(is.na(.),0, .))
 
-saveRDS(statelevel_predictors_df, "Modelo_area/PER_2024/TFR/input/statelevel_predictors_df_update_provi.rds")
+saveRDS(statelevel_predictors_df, "Modelo_area/PER_2024/ASFR/25-29/input/statelevel_predictors_df_update_provi.rds")
 
 
 statelevel_predictors_df_m <- list(
@@ -1340,5 +1340,6 @@ statelevel_predictors_df_m <- list(
   
   mutate_all(~ifelse(is.na(.),0, .))
 
-saveRDS(statelevel_predictors_df_m, "Modelo_area/PER_2024/TFR/input/statelevel_predictors_df_update_provi_muj.rds")
+saveRDS(statelevel_predictors_df_m, "Modelo_area/PER_2024/ASFR/25-29/input/statelevel_predictors_df_update_provi_muj.rds")
+
 

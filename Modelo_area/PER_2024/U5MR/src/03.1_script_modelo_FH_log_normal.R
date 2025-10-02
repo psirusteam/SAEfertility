@@ -18,7 +18,6 @@ library(magrittr)
 library(labelled)
 library(survey)
 library(srvyr)
-library(gtsummary)
 library(epiDisplay)
 library(readxl)
 library(knitr)
@@ -44,17 +43,38 @@ library(fastDummies)
 ################################################################################
 
 est_dir <- readRDS(
-  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimación_directa_phv_FGV.rds"
+  "Modelo_area/PER_2024/TFR/output/estimación_directa_phv_FGV.rds"
 )
 est_dir <- est_dir %>%
   mutate(dame = as.character(dame),
          dame = if_else(nchar(dame) == 5, str_c("0", dame), dame))
 
 info_covariables <- readRDS(
-  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input/statelevel_predictors_df_dame.rds"
-) %>% rename(dame = dam2)
+  "Modelo_area/PER_2024/TFR/input/statelevel_predictors_df_update_dame.rds"
+)  %>% mutate(dam = str_sub(dame, 1, 2))
 
-info_satelitales <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/input/satelitales_dame.rds") %>%
+# info_covariables_m <- readRDS("Modelo_area/PER_2024/TFR/input/statelevel_predictors_df_update_dame_muj.rds") %>% dplyr::select(
+#   -c(
+#     "mean_hijos",
+#     "area0",
+#     "area1",
+#     "edad2",
+#     "edad3",
+#     "edad4",
+#     "edad5",
+#     "etnia2",
+#     "discapacidad1",
+#     "anoest2",
+#     "anoest3",
+#     "anoest4",
+#     "etnia1"
+#   )
+# )
+
+
+info_covariables_m <- readRDS("Modelo_area/PER_2024/TFR/input/statelevel_predictors_df_update_dame_muj.rds") %>% mutate(dam = str_sub(dame, 1, 2))
+
+info_satelitales <- readRDS("Modelo_area/PER_2024/TFR/input/satelitales_dame.rds") %>%
   dplyr :: select(-c("tasa_desocupacion")) %>%
   rename(
     dame = mpio,
@@ -114,11 +134,16 @@ info_satelitales <- info_satelitales %>%
     })
   )
 
-info_covariables <- left_join(info_covariables, info_satelitales, by = "dame") 
+# info_covariables <- info_covariables %>%
+#   left_join(info_satelitales %>% dplyr::select(-c("depto")),   by = "dame") #%>%
+#   left_join(info_covariables_m, by = "dame")
+
+info_covariables <- info_covariables_m %>%
+  left_join(info_satelitales %>% dplyr::select(-c("depto")),   by = "dame")
 
 #Crear dummies por dpto
 
-info_covariables <- dummy_cols(info_covariables, select_columns = "depto",remove_selected_columns = TRUE)
+info_covariables <- dummy_cols(info_covariables, select_columns = "dam",remove_selected_columns = TRUE)
 
 ################################################################################
 ###------------------------Modelo FAY HARRIOT NORMAL-------------------------###
@@ -127,12 +152,12 @@ info_covariables <- dummy_cols(info_covariables, select_columns = "depto",remove
 #Union full entre encuesta y covariables administrativas
 base_FH <- full_join(est_dir, info_covariables, by = "dame" )
 
-saveRDS(base_FH, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/Base_FH.rds")
+#saveRDS(base_FH, "Modelo_area/PER_2024/TFR/output/Base_FH.rds")
 
 ##Preparando los insumos para STAN-----------------------------------------------
 
 #Dominios observados
-data_dir <- base_FH %>% filter(!is.na(hijos_nacidos))
+data_dir <- base_FH %>% filter(!is.na(TFR))
 #Dominios no observados
 data_syn <-
   base_FH %>% anti_join(data_dir %>% dplyr:: select(dame))
@@ -140,7 +165,7 @@ data_syn <-
 #modelo1, full - definiendo matriz de efectos fijos
 
 nombres <- names(info_covariables)
-nombres <- nombres[!(nombres %in% c("dame", "depto"))]
+nombres <- nombres[!(nombres %in% c("dame","depto" ))]
 
 
 my_formula1_full <- as.formula(                      
@@ -156,22 +181,29 @@ Xs <- model.matrix(my_formula1_full, data = data_syn)
 #Identificar columnas de Xdat que no estan presentes en Xs
 temp <- setdiff(colnames(Xdat),colnames(Xs))
 
-#Creando lista de parametros para STAN
+ggplot(data_dir, aes(x = log10(TFR  + 10) )) +
+  geom_density(fill = "steelblue", alpha = 0.7) +
+  labs(title = "Gráfico de Densidad de TFR", x = "TFR", y = "Densidad")
+
 sample_data <- list(
   N1 = nrow(Xdat),   # Observados.
   N2 = nrow(Xs),   # NO Observados.
   p  = ncol(Xdat),       # Número de regresores.
   X  = as.matrix(Xdat),  # Covariables Observados.
   Xs = as.matrix(Xs),    # Covariables NO Observados
-  y  = as.numeric(data_dir$hijos_nacidos), # Estimación directa
+  y  = as.numeric(data_dir$TFR), # Estimación directa
   sigma_e = sqrt(data_dir$hat_var)  # Error de estimación
 )
 
-fit_FH_normal <- "Modelo_area/PER_2024/0funciones/17FH_normal.stan"
+
+fit_FH_lognormal <- "Modelo_area/PER_2024/0funciones/18Log_normal.stan"
+
 options(mc.cores = parallel::detectCores())
+
 rstan::rstan_options(auto_write = TRUE) # speed up running time 
-model_FH_normal <- stan(
-  file = fit_FH_normal,  
+
+model_FH_lognormal <- stan(
+  file = fit_FH_lognormal,  
   data = sample_data,   
   verbose = FALSE,
   warmup = 9000,   #iter - 1000      
@@ -183,87 +215,56 @@ model_FH_normal <- stan(
     max_treedepth = 12
   )
   
-  )
+)
 
-saveRDS(object = model_FH_normal,
-        file = "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/model_FH_normal.rds")
+saveRDS(object = model_FH_lognormal,
+        file = "Modelo_area/PER_2024/TFR/output/model_FH_lognormal.rds")
 
-y_pred_B <- as.array(model_FH_normal, pars = "theta") %>% 
+model_FH_lognormal <- readRDS(file = "Modelo_area/PER_2024/TFR/output/model_FH_lognormal.rds")
+
+y_pred_B <- as.array(model_FH_lognormal, pars = "theta") %>% 
   as_draws_matrix()
+
 rowsrandom <- sample(nrow(y_pred_B), 500)
 y_pred2 <- y_pred_B[rowsrandom, ]#de las 4k toma 500 lineas aleatorias
-a <- ppc_dens_overlay(y = as.numeric(data_dir$hijos_nacidos), y_pred2)
+a <- ppc_dens_overlay(y = as.numeric(data_dir$TFR), y_pred2)
 
 ggsave(plot = a,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal.jpeg", 
+       filename =  "Modelo_area/PER_2024/TFR/output/modelo_FH_lognormal.jpeg", 
        scale = 3)
 
 #Analisis del grafico de la convergencia de las cadenas de sigma cuadrado_u
-posterior_sigma2_u <- as.array(model_FH_normal, pars = "sigma2_u")
+posterior_sigma2_u <- as.array(model_FH_lognormal, pars = "sigma2_u")
 (mcmc_dens_chains(posterior_sigma2_u) +
     mcmc_areas(posterior_sigma2_u) ) / 
   mcmc_trace(posterior_sigma2_u)
-validacionRhat<-summary(model_FH_normal)$summary%>%as.data.frame()
+validacionRhat<-summary(model_FH_lognormal)$summary%>%as.data.frame()
 mcmc_rhat(validacionRhat$Rhat)
 validacionRhat%>%filter(Rhat>1.1) #aumentar iteraciones, ideal Rhat<1.1
 
+
 #metodo de validacion del modelo FH obtenido en STAN
-theta <-   summary(model_FH_normal, pars =  "theta")$summary %>%
-  data.frame()
-thetaSyn <-   summary(model_FH_normal, pars =  "thetaSyn")$summary %>%
-  data.frame()
-theta_FH <-   summary(model_FH_normal, pars =  "thetaFH")$summary %>%
+theta <-   summary(model_FH_lognormal, pars =  "theta")$summary %>%
   data.frame()
 
+
 data_dir %<>% mutate(
-  thetadir = hijos_nacidos,
+  thetadir = TFR,
   theta_pred = theta$mean,
-  thetaSyn = thetaSyn$mean,
-  thetaFH = theta_FH$mean,
   theta_pred_EE = theta$sd,
   Cv_theta_pred = theta_pred_EE/theta_pred,
   doble_theta_pred_EE = theta_pred_EE*2
 ) 
 
-# Estimación predicción del modelo vs ecuación ponderada de FH
-p11 <- ggplot(data_dir, aes(x = theta_pred, y = thetaFH)) +
-  geom_point() + 
-  geom_abline(slope = 1,intercept = 0, colour = "red") +
-  theme_bw(10) 
 
-# Estimación con la ecuación ponderada de FH Vs estimación sintética
-p12 <- ggplot(data_dir, aes(x = thetaSyn, y = thetaFH)) +
-  geom_point() + 
-  geom_abline(slope = 1,intercept = 0, colour = "red") +
-  theme_bw(10) 
-
-# Estimación con la ecuación ponderada de FH Vs estimación directa
-p21 <- ggplot(data_dir, aes(x = thetadir, y = thetaFH)) +
-  geom_point() + 
-  geom_abline(slope = 1,intercept = 0, colour = "red") +
-  theme_bw(10) 
-
-# Estimación directa Vs estimación sintética
-p22 <- ggplot(data_dir, aes(x = thetadir, y = thetaSyn)) +
-  geom_point() + 
-  geom_abline(slope = 1,intercept = 0, colour = "red") +
-  theme_bw(10)
-
-a <- (p11+p12)/(p21+p22)
-
-ggsave(plot = a,
-       filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal_comparaciones.jpeg", 
-       scale = 3)
 
 #Estimacion del FH en los dominios NO observados
-theta_syn_pred <- summary(model_FH_normal, pars =  "y_pred")$summary %>%
+theta_syn_pred <- summary(model_FH_lognormal, pars =  "theta_pred")$summary %>%
   data.frame()
 
 data_syn <- data_syn %>% 
   mutate(
     theta_pred = theta_syn_pred$mean,
-    thetaSyn = theta_pred,
-    thetaFH = theta_pred,
     theta_pred_EE = theta_syn_pred$sd,
     Cv_theta_pred = theta_pred_EE/theta_pred,
     doble_theta_pred_EE = theta_pred_EE*2)
@@ -271,12 +272,12 @@ dim(data_syn)
 dim(theta_syn_pred)
 
 data_dir2<-data_dir %>% dplyr::select(dame,
-                                      hijos_nacidos,thetaFH,
+                                      TFR,
                                       theta_pred,theta_pred_EE,
                                       Cv_theta_pred,
                                       doble_theta_pred_EE)
 data_syn2<-data_syn %>% dplyr::select(dame,
-                                      hijos_nacidos,thetaFH,
+                                      TFR,
                                       theta_pred,theta_pred_EE,
                                       Cv_theta_pred,
                                       doble_theta_pred_EE)
@@ -287,4 +288,6 @@ dim(data_estimacion)
 
 
 #Guardar la base de las estimaciones
-saveRDS(data_estimacion, "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimacion_promedio_hij_vivos_FH.rds")
+saveRDS(data_estimacion, "Modelo_area/PER_2024/TFR/output/estimacion_TFR_FH.rds")
+
+

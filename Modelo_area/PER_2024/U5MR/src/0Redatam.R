@@ -17,7 +17,7 @@ library(Rcpp)
 library(RcppProgress)
 library(redatam)
 
-peru <- redatam.open("Modelo_area/PER_2024/TFR/input/cpv-per-2017-cde_diccionario.dicx")
+peru <- redatam.open("Modelo_area/PER_2024/U5MR/input/cpv-per-2017-cde_diccionario.dicx")
 
 redatam.entities(peru)
 redatam.variables(peru, "VIVIENDA")
@@ -83,8 +83,8 @@ muj_total <- CONTEOS2 %>%
 sum(muj_15_49$n)
 sum(muj_total$n)
 
-saveRDS(muj_15_49, "Modelo_area/PER_2024/TFR/output/censo_muj_15_49.rds")
-saveRDS(muj_total, "Modelo_area/PER_2024/TFR/output/censo_muj_total.rds")
+saveRDS(muj_15_49, "Modelo_area/PER_2024/U5MR/output/censo_muj_15_49.rds")
+saveRDS(muj_total, "Modelo_area/PER_2024/U5MR/output/censo_muj_total.rds")
 
 
 ## Promedio hijos nacidos vivos por dame ------------------------------------------
@@ -135,13 +135,13 @@ hijos_nacidos <- CONTEOS2 %>%
 
 saveRDS(
   hijos_nacidos,
-  "Modelo_area/PER_2024/TFR//output/censo_hijos_nacidos.rds"
+  "Modelo_area/PER_2024/U5MR/output/censo_hijos_nacidos.rds"
 )
 
 
 #################### Variables Censo ##########################################
 
-peru <- redatam.open("Modelo_area/PER_2024/TFR/input/cpv-per-2017-cde_diccionario.dicx")
+peru <- redatam.open("Modelo_area/PER_2024/U5MR/input/cpv-per-2017-cde_diccionario.dicx")
 
 
 redatam.entities(peru)
@@ -1304,7 +1304,7 @@ statelevel_predictors_df <- list(
   
   mutate_all(~ifelse(is.na(.),0, .))
 
-saveRDS(statelevel_predictors_df, "Modelo_area/PER_2024/TFR/input/statelevel_predictors_df_update_provi.rds")
+saveRDS(statelevel_predictors_df, "Modelo_area/PER_2024/U5MR/input/statelevel_predictors_df_update_provi.rds")
 
 
 statelevel_predictors_df_m <- list(
@@ -1340,5 +1340,7 @@ statelevel_predictors_df_m <- list(
   
   mutate_all(~ifelse(is.na(.),0, .))
 
-saveRDS(statelevel_predictors_df_m, "Modelo_area/PER_2024/TFR/input/statelevel_predictors_df_update_provi_muj.rds")
+saveRDS(statelevel_predictors_df_m, "Modelo_area/PER_2024/U5MR/input/statelevel_predictors_df_update_provi_muj.rds")
+
+
 
