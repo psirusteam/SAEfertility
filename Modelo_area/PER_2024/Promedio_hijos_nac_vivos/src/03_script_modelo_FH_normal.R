@@ -18,7 +18,6 @@ library(magrittr)
 library(labelled)
 library(survey)
 library(srvyr)
-library(gtsummary)
 library(epiDisplay)
 library(readxl)
 library(knitr)
@@ -203,6 +202,8 @@ y_pred_B <- as.array(model_FH_normal, pars = "theta") %>%
 rowsrandom <- sample(nrow(y_pred_B), 500)
 y_pred2 <- y_pred_B[rowsrandom, ]#de las 4k toma 500 lineas aleatorias
 a <- ppc_dens_overlay(y = as.numeric(data_dir$hijos_nacidos), y_pred2)
+
+a
 
 ggsave(plot = a,
        filename =  "Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/modelo_FH_normal.jpeg", 

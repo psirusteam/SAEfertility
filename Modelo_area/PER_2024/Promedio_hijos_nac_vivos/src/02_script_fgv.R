@@ -29,7 +29,7 @@ est_dir <- readRDS("Modelo_area/PER_2024/Promedio_hijos_nac_vivos/output/estimac
 # Transformación de la varianza ------------------------------------------------
 
 est_dir_FGV<-est_dir %>%
-  select(dame,hijos_nacidos,nd,vardir, deff_muni) %>%
+  select(dame,hijos_nacidos,nd,vardir) %>%
   mutate(ln_sigma2=log(vardir))
 
 #[5.2] Analisis grafico----
@@ -60,25 +60,12 @@ p1 | p2
 # usando el coeficiente de determinacion R. Las diferentes combinaciones, 
 
 
-FGV1<-lm(ln_sigma2~1+I(nd^2)+I(sqrt(hijos_nacidos))+I(log(nd^hijos_nacidos)),
-         data = est_dir_FGV)#modelo1
-summary(FGV1)
-FGV1<-lm(ln_sigma2~1+I(1/nd)+I(sqrt(hijos_nacidos))+I(log(nd^hijos_nacidos)),
-         data = est_dir_FGV)#modelo2
-summary(FGV1)
-FGV1<-lm(ln_sigma2~1+I(1/sqrt(nd))+I(hijos_nacidos),
-         data=est_dir_FGV)#modelo3
-summary(FGV1)
-FGV1<-lm(ln_sigma2~1+I(1/exp(nd))+I(hijos_nacidos**(1/3))+I((nd^hijos_nacidos)),
-         data = est_dir_FGV)#modelo5
-summary(FGV1)
-FGV1<-lm(ln_sigma2~1+I(hijos_nacidos**(1/3))+I((nd^hijos_nacidos)),
-         data = est_dir_FGV)#modelo6
-summary(FGV1)
 FGV1 <- lm(ln_sigma2 ~ nd + hijos_nacidos,
            data = est_dir_FGV)#modelo7 -final
 summary(FGV1)
+
 plot(FGV1)
+
 ## Obtener Valor de la constante Delta
 delta.hat = sum(est_dir_FGV$vardir) / 
   sum(exp(fitted.values(FGV1))) 

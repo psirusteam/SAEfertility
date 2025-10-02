@@ -86,15 +86,22 @@ estimacion <- diseno %>%
 
 nupm <- base_MEF %>% distinct(dam,dame,upm) %>%
   group_by(dam,dame) %>% 
-  tally()
+  tally()%>% rename(n_upm = n)
+
+n_strata <- base_MEF %>% distinct(dam, dame, strata) %>%
+  group_by(dam, dame) %>%
+  tally() %>% rename(n_strata = n)
+
 
 nd <- base_MEF %>%
   group_by(dam, dame) %>%
   summarise(nd = n(), .groups = "drop")
 
+
 estimacion <- estimacion %>% left_join(
   nupm,  by = c("dam", "dame")) %>% left_join(
-  nd, by = c("dam", "dame")) %>% rename(p_deff = hijos_nacidos_deff)
+    nd, by = c("dam", "dame"))%>% left_join(
+      n_strata, by = c("dam", "dame")) %>% mutate(gl = n_upm - n_strata)
 
 
 
@@ -123,15 +130,14 @@ saveRDS(
 #modelo sae
 
 base_sae <- estimacion %>% data.frame()%>%
-  filter(nd > 40, n >= 4) %>%
+  filter(gl >= 2, nd > 30) %>%
   transmute(
     dam = dam,              # Id para los departamento
     dame = dame,              #Id para los distritos
     nd = nd,                # Número de observaciones por dominios
     hijos_nacidos = hijos_nacidos,      # Estimación de la variable
     vardir = hijos_nacidos_se ^ 2,      # Estimación de la varianza directa 
-    cv = hijos_nacidos_se/hijos_nacidos,                       
-    deff_muni = p_deff        # Deff por dominio municipal
+    cv = hijos_nacidos_se/hijos_nacidos
   )
 
 saveRDS(
